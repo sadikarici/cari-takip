@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fbfbf9">
+<title>Cari Defter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Paper / Bauhaus inspired */
+    --paper: #fbfbf9;
+    --paper-2: #f3f2ee;
+    --ink: #1c1c1a;
+    --ink-2: #3a3a36;
+    --muted: #78786f;
+    --faint: #b8b5a9;
+    --hair: #e4e2d8;
+    --hair-2: #cfccbf;
+
+    /* Accents — desaturated, editorial */
+    --red: #c7392c;
+    --red-bg: #faeee9;
+    --ochre: #b8842a;
+    --ochre-bg: #f7ecc8;
+    --forest: #3a6b3a;
+    --forest-bg: #e6ede0;
+    --ink-accent: #1c1c1a;
+
+    /* Asset colors (restrained) */
+    --c-try: #1c1c1a;
+    --c-usd: #2d6a4f;
+    --c-eur: #1e5a96;
+    --c-gold: #9a7420;
+
+    --r-sm: 4px;
+    --r-md: 6px;
+    --r-lg: 10px;
+
+    --safe-top: env(safe-area-inset-top);
+    --safe-bot: env(safe-area-inset-bottom);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button { font-family: inherit; }
+
+  /* ============ LAYOUT ============ */
+  .shell {
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: calc(100px + var(--safe-bot));
+  }
+
+  /* ============ TOP BAR ============ */
+  .topbar {
+    padding: calc(14px + var(--safe-top)) 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--hair);
+  }
+  .mark {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .mark-symbol {
+    display: inline-block;
+    width: 10px; height: 10px;
+    background: var(--ink);
+    transform: rotate(45deg);
+    margin-right: 2px;
+  }
+  .mark-name {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .mark-version {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--faint);
+    letter-spacing: 0.08em;
+  }
+  .date-stamp {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ============ MARKET PANEL — the live rates ============ */
+  .market {
+    padding: 14px 20px 14px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--hair);
+  }
+  .market-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .market-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--forest);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .market-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--faint);
+  }
+  .market-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--hair);
+    border: 1px solid var(--hair);
+  }
+  .market-cell {
+    background: var(--paper);
+    padding: 10px 12px;
+  }
+  .market-cell .sym {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+  .market-cell .rate {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .market-cell .unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--faint);
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+  }
+
+  /* ============ SUMMARY (receivables) ============ */
+  .summary {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .summary-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .summary-amount {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 44px;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .summary-amount .sym {
+    color: var(--muted);
+    font-weight: 400;
+    margin-right: 6px;
+  }
+  .summary-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+  .summary-meta .divider { color: var(--faint); margin: 0 8px; }
+  .summary-meta .danger { color: var(--red); }
+
+  /* ============ SECTION HEADER ============ */
+  .section-head {
+    padding: 18px 20px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .section-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .section-title em {
+    font-style: italic;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .section-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ============ CONTACT LIST ============ */
+  .contact-list {
+    padding: 0 20px;
+  }
+  .contact {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hair);
+    cursor: pointer;
+    align-items: center;
+    transition: opacity 0.15s;
+  }
+  .contact:last-child { border-bottom: none; }
+  .contact:active { opacity: 0.6; }
+  .contact.settled {
+    opacity: 0.5;
+  }
+  .contact.overdue .contact-name::before {
+    content: '';
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--red);
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .contact-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--paper-2);
+    border: 1px solid var(--hair-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .contact-main { min-width: 0; }
+  .contact-name {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .contact-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .contact-meta .dot { color: var(--faint); margin: 0 6px; }
+  .contact-amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .contact-amount .main {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .contact.settled .contact-amount .main {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+  .contact-amount .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* ============ EMPTY STATE ============ */
+  .empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-mark {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 40px;
+    font-style: italic;
+    color: var(--faint);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+  .empty-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .empty-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ============ FAB ============ */
+  .fab-wrap {
+    position: fixed;
+    bottom: calc(20px + var(--safe-bot));
+    left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .fab {
+    pointer-events: auto;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 13px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    border-radius: 100px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(28, 28, 26, 0.2), 0 1px 3px rgba(28,28,26,0.12);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.1s;
+  }
+  .fab:active { transform: scale(0.97); }
+  .fab-icon {
+    width: 18px; height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .fab-icon::before, .fab-icon::after {
+    content: '';
+    position: absolute;
+    background: var(--paper);
+  }
+  .fab-icon::before { width: 12px; height: 1.5px; }
+  .fab-icon::after { width: 1.5px; height: 12px; }
+
+  /* ============ MODAL ============ */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 28, 26, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 50;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+  }
+  .scrim.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sheet {
+    background: var(--paper);
+    width: 100%;
+    max-width: 640px;
+    max-height: 94vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px 14px 0 0;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+  .sheet-handle {
+    width: 36px; height: 3px;
+    background: var(--hair-2);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+  .sheet-header {
+    padding: 14px 20px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--hair);
+    flex-shrink: 0;
+  }
+  .sheet-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  .sheet-title em { font-style: italic; color: var(--muted); font-weight: 400; }
+  .sheet-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .sheet-close {
+    background: transparent;
+    border: 1px solid var(--hair-2);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .sheet-close::before, .sheet-close::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 12px; height: 1.2px;
+    background: var(--ink-2);
+    transform-origin: center;
+  }
+  .sheet-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+  .sheet-close::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+  .sheet-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .sheet-footer {
+    padding: 12px 20px calc(12px + var(--safe-bot));
+    border-top: 1px solid var(--hair);
+    background: var(--paper-2);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ============ FORM FIELDS ============ */
+  .field { margin-bottom: 14px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .field-row .field { margin-bottom: 0; }
+
+  .field-label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .field-input {
+    width: 100%;
+    padding: 11px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--hair-2);
+    border-radius: var(--r-md);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .field-input::placeholder { color: var(--faint); }
+  .field-input:focus { border-color: var(--ink); }
+  textarea.field-input { resize: vertical; min-height: 60px; font-family: inherit; }
+
+  /* Conversion hint — compact inline */
+  .hint-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--paper-2);
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+  }
+  .hint-box .hint-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .hint-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .hint-cell {
+    text-align: left;
+  }
+  .hint-cell .sym {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 1px;
+  }
+  .hint-cell .val {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .hint-loading {
+    font-size: 11px;
+    color: var(--faint);
+    font-style: italic;
+  }
+  .hint-footer {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--faint);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--hair);
+    letter-spacing: 0.03em;
+  }
+
+  /* ============ BUTTONS ============ */
+  .btn {
+    flex: 1;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    border-radius: var(--r-md);
+    border: 1px solid;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--hair-2); }
+  .btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
+  .btn-sm { padding: 7px 12px; font-size: 12px; flex: 0 0 auto; }
+
+  /* ============ CONTACT DETAIL (cari) ============ */
+  .account-head {
+    padding: 18px 20px 14px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--hair);
+    position: relative;
+  }
+  .account-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .account-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--hair-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .account-name {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    margin-bottom: 2px;
+  }
+  .account-contact {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .account-contact a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--faint); }
+
+  .balance-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .balance-big {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1;
+  }
+  .balance-big .sym { color: var(--muted); font-weight: 400; margin-right: 4px; font-size: 0.65em; vertical-align: top; }
+  .balance-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .balance-break {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 0.02em;
+  }
+  .balance-break .up { color: var(--red); }
+  .balance-break .dn { color: var(--forest); }
+
+  /* Cari notes */
+  .account-notes {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--hair-2);
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+    font-family: 'IBM Plex Serif', serif;
+  }
+  .account-notes::before { content: '— '; color: var(--faint); }
+
+  /* Equivalents — minimal table */
+  .equiv-section { padding: 16px 20px 10px; }
+  .equiv-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .equiv-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .equiv-refresh {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: var(--r-sm);
+  }
+  .equiv-refresh:hover { background: var(--paper-2); }
+
+  .equiv-table {
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .equiv-colhead {
+    display: grid;
+    grid-template-columns: 72px 1fr 1fr;
+    padding: 8px 12px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--hair);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .equiv-colhead > div:nth-child(2), .equiv-colhead > div:nth-child(3) { text-align: right; }
+  .equiv-line {
+    display: grid;
+    grid-template-columns: 72px 1fr 1fr;
+    padding: 12px;
+    border-bottom: 1px solid var(--hair);
+    align-items: center;
+  }
+  .equiv-line:last-child { border-bottom: none; }
+  .equiv-asset {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .asset-chip {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--paper);
+    flex-shrink: 0;
+  }
+  .asset-chip.usd { background: var(--c-usd); }
+  .asset-chip.eur { background: var(--c-eur); }
+  .asset-chip.gold { background: var(--c-gold); }
+
+  .equiv-val { text-align: right; }
+  .equiv-val .q {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .equiv-val .r {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .equiv-val .delta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .delta.up { color: var(--forest); }
+  .delta.dn { color: var(--red); }
+
+  .equiv-footnote {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--faint);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.03em;
+  }
+
+  /* TRANSACTIONS (Hareketler) */
+  .txs-section { padding: 6px 20px 20px; }
+  .txs-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--paper);
+    border: 1px solid var(--hair-2);
+    border-radius: var(--r-md);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--ink);
+  }
+  .action-btn:active { background: var(--paper-2); }
+  .action-btn.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .action-btn .sign {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+
+  .tx-list {
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+    background: var(--paper);
+  }
+  .tx {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid var(--hair);
+    align-items: center;
+  }
+  .tx:last-child { border-bottom: none; }
+  .tx-dot {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .tx-dot.debt {
+    background: var(--red-bg);
+    color: var(--red);
+  }
+  .tx-dot.payment {
+    background: var(--forest-bg);
+    color: var(--forest);
+  }
+  .tx-body { min-width: 0; }
+  .tx-label {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    margin-bottom: 1px;
+  }
+  .tx-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .tx-meta .pill {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--paper-2);
+    color: var(--muted);
+  }
+  .tx-meta .pill.overdue { background: var(--red-bg); color: var(--red); }
+  .tx-meta .pill.soon { background: var(--ochre-bg); color: var(--ochre); }
+  .tx-amt {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .tx-amt.debt::before { content: '+'; color: var(--red); margin-right: 2px; }
+  .tx-amt.payment { color: var(--forest); }
+  .tx-amt.payment::before { content: '−'; margin-right: 2px; }
+
+  .tx-actions {
+    display: none;
+    padding: 0 12px 10px;
+    gap: 6px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .tx.expanded + .tx-actions { display: flex; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: calc(16px + var(--safe-top));
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 9px 16px;
+    border-radius: 100px;
+    font-size: 12px;
+    z-index: 100;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    font-weight: 500;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--forest); }
+  .toast.error { background: var(--red); }
+
+  /* Mini transaction form */
+  .mini-sheet {
+    padding: 16px 20px 20px;
+  }
+
+  /* Filter tabs — minimalist */
+  .filter-row {
+    padding: 0 20px 10px;
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .filter {
+    padding: 8px 2px;
+    background: none;
+    border: none;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    margin-right: 20px;
+    letter-spacing: -0.005em;
+  }
+  .filter.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  .filter span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    margin-left: 3px;
+    color: var(--faint);
+  }
+  .filter.active span { color: var(--muted); }
+
+  /* Footer mark */
+  .foot {
+    text-align: center;
+    padding: 26px 20px 0;
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: 0.3em;
+  }
+
+  /* Rule */
+  .rule {
+    height: 1px;
+    background: var(--hair);
+    margin: 0 20px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="mark">
+      <span class="mark-symbol"></span>
+      <span class="mark-name">Cari Defter</span>
+      <span class="mark-version">v3</span>
+    </div>
+    <div class="date-stamp" id="dateStamp">—</div>
+  </div>
+
+  <!-- LIVE MARKET PANEL -->
+  <div class="market">
+    <div class="market-head">
+      <div class="market-title"><span class="live-dot"></span>Piyasa — Güncel Kurlar</div>
+      <div class="market-time" id="marketTime">—</div>
+    </div>
+    <div class="market-grid" id="marketGrid">
+      <div class="market-cell">
+        <div class="sym">USD / TRY</div>
+        <div class="rate" id="rateUSD">—</div>
+        <div class="unit">1 dolar karşılığı</div>
+      </div>
+      <div class="market-cell">
+        <div class="sym">EUR / TRY</div>
+        <div class="rate" id="rateEUR">—</div>
+        <div class="unit">1 euro karşılığı</div>
+      </div>
+      <div class="market-cell">
+        <div class="sym">GRAM ALTIN</div>
+        <div class="rate" id="rateGold">—</div>
+        <div class="unit">1 gram karşılığı</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="summary-label">TOPLAM ALACAK</div>
+    <div class="summary-amount"><span class="sym">₺</span><span id="sumTotal">0</span></div>
+    <div class="summary-meta">
+      <span id="sumPeople">0 kişi</span>
+      <span class="divider">·</span>
+      <span id="sumPaid">₺0 tahsil</span>
+      <span class="divider">·</span>
+      <span class="danger" id="sumOverdue">₺0 gecikmiş</span>
+    </div>
+  </div>
+
+  <!-- SECTION HEADER -->
+  <div class="section-head">
+    <div class="section-title">Cari <em>hesaplar</em></div>
+    <div class="section-count" id="sectionCount">0 kayıt</div>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-row">
+    <button class="filter active" data-filter="active">Açık hesaplar<span id="cntActive">0</span></button>
+    <button class="filter" data-filter="overdue">Geciken<span id="cntOverdue">0</span></button>
+    <button class="filter" data-filter="settled">Kapalı<span id="cntSettled">0</span></button>
+    <button class="filter" data-filter="all">Hepsi<span id="cntAll">0</span></button>
+  </div>
+
+  <!-- CONTACT LIST -->
+  <div class="contact-list" id="contactList"></div>
+
+  <div class="foot">· · ·</div>
+</div>
+
+<!-- FAB -->
+<div class="fab-wrap">
+  <button class="fab" id="fabAdd">
+    <span class="fab-icon"></span>
+    <span>Yeni cari hesap</span>
+  </button>
+</div>
+
+<!-- ============ CONTACT FORM SHEET ============ -->
+<div class="scrim" id="scrimContact">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="contactFormTitle">Yeni <em>cari</em></div>
+        <div class="sheet-sub">Kişi kartı oluştur</div>
+      </div>
+      <button class="sheet-close" id="contactClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <label class="field-label">Ad soyad *</label>
+        <input type="text" class="field-input" id="cName" placeholder="Örn: Ayşe Yılmaz" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Telefon</label>
+          <input type="tel" class="field-input" id="cPhone" placeholder="+90 ..." autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="field-label">E-posta</label>
+          <input type="email" class="field-input" id="cEmail" placeholder="—" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Not (isteğe bağlı)</label>
+        <textarea class="field-input" id="cNotes" placeholder="Nasıl tanıştınız, özel durum, vs."></textarea>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="contactCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="contactSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ACCOUNT DETAIL SHEET ============ -->
+<div class="scrim" id="scrimAccount">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+
+    <!-- Account head: identity + balance -->
+    <div class="account-head">
+      <div class="account-identity">
+        <div class="account-avatar" id="aAvatar">?</div>
+        <div style="flex:1; min-width:0;">
+          <div class="account-name" id="aName">—</div>
+          <div class="account-contact" id="aContact">—</div>
+        </div>
+        <button class="sheet-close" id="accountClose" aria-label="Kapat"></button>
+      </div>
+      <div class="balance-row">
+        <div>
+          <div class="balance-label">Kalan alacak</div>
+          <div class="balance-big"><span class="sym">₺</span><span id="aBalance">0</span></div>
+        </div>
+        <div class="balance-break" id="aBreak">—</div>
+      </div>
+      <div class="account-notes" id="aNotes" style="display:none;"></div>
+    </div>
+
+    <div class="sheet-body" style="padding:0;">
+
+      <!-- Equivalents -->
+      <div class="equiv-section">
+        <div class="equiv-head">
+          <div class="equiv-title">Değer karşılıkları</div>
+          <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
+        </div>
+        <div class="equiv-table">
+          <div class="equiv-colhead">
+            <div>Varlık</div>
+            <div>Verildiğinde</div>
+            <div>Bugün</div>
+          </div>
+          <div id="aEquiv">
+            <div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hesaplanıyor...</div>
+          </div>
+        </div>
+        <div class="equiv-footnote" id="aEquivFoot">—</div>
+      </div>
+
+      <!-- Transactions / Hareketler -->
+      <div class="txs-section">
+        <div class="equiv-head">
+          <div class="equiv-title">Hareketler</div>
+          <div class="equiv-title" id="txCount" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
+        </div>
+        <div class="txs-actions">
+          <button class="action-btn primary" id="addDebtBtn">
+            <span class="sign">+</span> Borç ver
+          </button>
+          <button class="action-btn" id="addPayBtn">
+            <span class="sign">−</span> Ödeme al
+          </button>
+        </div>
+        <div class="tx-list" id="aTxList"></div>
+      </div>
+
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="aDelete">Cariyi sil</button>
+      <button class="btn btn-ghost" id="aEdit">Düzenle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRANSACTION SHEET (add debt/payment) ============ -->
+<div class="scrim" id="scrimTx">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="txTitle"><em>—</em></div>
+        <div class="sheet-sub" id="txSub">—</div>
+      </div>
+      <button class="sheet-close" id="txClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Tutar (₺) *</label>
+          <input type="number" class="field-input" id="txAmount" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="field">
+          <label class="field-label">Tarih *</label>
+          <input type="date" class="field-input" id="txDate">
+        </div>
+      </div>
+      <div class="field" id="txDueField">
+        <label class="field-label">Vade tarihi (opsiyonel)</label>
+        <input type="date" class="field-input" id="txDue">
+      </div>
+      <div class="field">
+        <label class="field-label">Açıklama (opsiyonel)</label>
+        <input type="text" class="field-input" id="txNote" placeholder="Ne için verildi / ödendi" autocomplete="off">
+      </div>
+
+      <div class="hint-box" id="txHint" style="display:none;">
+        <div class="hint-label">Bu tarihteki karşılığı</div>
+        <div id="txHintBody" class="hint-loading">Kurlar hesaplanıyor...</div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="txCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="txSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ STORE ============
+const KEY = 'cari_defter_v3';
+const RATES_KEY = 'cari_rates_cache_v2';
+const RATES_TTL = 30 * 60 * 1000;
+
+// Data model:
+// {
+//   contacts: [{
+//     id, name, phone, email, notes, createdAt,
+//     txs: [{
+//       id, type: 'debt'|'payment', amount, date, dueDate?, note?,
+//       snapshot: { date, tryPerUsd, tryPerEur, goldGramTRY, goldApprox }
+//     }]
+//   }]
+// }
+
+let store = { contacts: [] };
+let filter = 'active';
+let editingContactId = null;
+let currentContactId = null;
+let txMode = null; // 'debt' | 'payment' | {edit: txId}
+let todayRates = null;
+let hintTimer = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) store = JSON.parse(raw);
+  } catch(e) { store = { contacts: [] }; }
+  if (!store.contacts) store.contacts = [];
+}
+function persist() { localStorage.setItem(KEY, JSON.stringify(store)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ============ HELPERS ============
+const fmtTL = (n, d = 0) => '₺' + Number(n).toLocaleString('tr-TR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const fmtNum = (n, d = 2) => Number(n).toLocaleString('tr-TR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('tr-TR', {day:'numeric', month:'long', year:'numeric'});
+}
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('tr-TR', {day:'numeric', month:'short', year:'2-digit'});
+}
+function daysUntil(iso) {
+  if (!iso) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(iso + 'T00:00:00'); due.setHours(0,0,0,0);
+  return Math.round((due - today) / 86400000);
+}
+function initials(name) {
+  const parts = (name || '?').trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+  return (parts[0] || '?').slice(0,2).toUpperCase();
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Contact aggregate calculations
+function contactTotals(c) {
+  let debt = 0, paid = 0;
+  (c.txs || []).forEach(t => {
+    if (t.type === 'debt') debt += Number(t.amount);
+    else if (t.type === 'payment') paid += Number(t.amount);
+  });
+  return { debt, paid, balance: Math.max(0, debt - paid) };
+}
+function contactIsSettled(c) {
+  const { debt, paid } = contactTotals(c);
+  return debt > 0 && paid >= debt - 0.01;
+}
+function contactIsActive(c) {
+  const { debt, paid } = contactTotals(c);
+  return debt > paid + 0.01;
+}
+function contactHasOverdue(c) {
+  // any unpaid debt (in FIFO sense, but we just check if any debt has passed due and total paid doesn't cover earlier debts)
+  const { debt, paid } = contactTotals(c);
+  if (paid >= debt - 0.01) return false;
+  // Sort debts by date asc, apply payments FIFO, check if any unpaid debt has passed due
+  const debts = (c.txs || []).filter(t => t.type === 'debt').sort((a,b) => a.date.localeCompare(b.date));
+  let remainingPaid = paid;
+  for (const d of debts) {
+    const amt = Number(d.amount);
+    if (remainingPaid >= amt) {
+      remainingPaid -= amt;
+    } else {
+      // this debt has an unpaid portion
+      if (d.dueDate && daysUntil(d.dueDate) < 0) return true;
+      remainingPaid = 0;
+    }
+  }
+  return false;
+}
+function contactEarliestOpenDebtDate(c) {
+  const debts = (c.txs || []).filter(t => t.type === 'debt').sort((a,b) => a.date.localeCompare(b.date));
+  const paid = contactTotals(c).paid;
+  let rem = paid;
+  for (const d of debts) {
+    const amt = Number(d.amount);
+    if (rem >= amt) rem -= amt;
+    else return d.date;
+  }
+  return null;
+}
+
+function toast(msg, kind = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + kind;
+  setTimeout(() => { t.className = 'toast ' + kind; }, 2400);
+}
+
+// ============ RATES ============
+const OZ = 31.1035;
+
+async function fetchFx(dateISO) {
+  const isToday = dateISO === todayISO();
+  const url = isToday
+    ? 'https://api.frankfurter.dev/v1/latest?base=TRY&symbols=USD,EUR'
+    : `https://api.frankfurter.dev/v1/${dateISO}?base=TRY&symbols=USD,EUR`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('fx');
+  const j = await res.json();
+  return {
+    date: j.date,
+    tryPerUsd: 1 / j.rates.USD,
+    tryPerEur: 1 / j.rates.EUR
+  };
+}
+
+async function fetchGoldOz() {
+  const res = await fetch('https://api.gold-api.com/price/XAU');
+  if (!res.ok) throw new Error('gold');
+  const j = await res.json();
+  return Number(j.price);
+}
+
+async function getTodayRates() {
+  try {
+    const c = JSON.parse(localStorage.getItem(RATES_KEY));
+    if (c && Date.now() - c.ts < RATES_TTL) return c.rates;
+  } catch(e){}
+
+  const [fx, oz] = await Promise.all([
+    fetchFx(todayISO()),
+    fetchGoldOz().catch(() => null)
+  ]);
+  const rates = {
+    date: fx.date,
+    tryPerUsd: fx.tryPerUsd,
+    tryPerEur: fx.tryPerEur,
+    goldOzUSD: oz,
+    goldGramTRY: oz ? (oz / OZ) * fx.tryPerUsd : null,
+    fetchedAt: new Date().toISOString()
+  };
+  localStorage.setItem(RATES_KEY, JSON.stringify({ts: Date.now(), rates}));
+  return rates;
+}
+
+async function getHistoricalRates(dateISO) {
+  const cacheKey = 'cari_hist_' + dateISO;
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey));
+    if (c && c.tryPerUsd) return c;
+  } catch(e){}
+
+  const fx = await fetchFx(dateISO);
+  let oz = null, approx = false;
+  try {
+    const res = await fetch(`https://api.gold-api.com/price/XAU/${dateISO}`);
+    if (res.ok) {
+      const j = await res.json();
+      if (j && j.price) oz = Number(j.price);
+    }
+  } catch(e){}
+  if (!oz) {
+    try { oz = await fetchGoldOz(); approx = true; } catch(e){ oz = null; }
+  }
+  const rates = {
+    date: fx.date,
+    requestedDate: dateISO,
+    tryPerUsd: fx.tryPerUsd,
+    tryPerEur: fx.tryPerEur,
+    goldOzUSD: oz,
+    goldGramTRY: oz ? (oz / OZ) * fx.tryPerUsd : null,
+    goldApprox: approx
+  };
+  localStorage.setItem(cacheKey, JSON.stringify(rates));
+  return rates;
+}
+
+function renderMarket(rates) {
+  if (!rates) {
+    document.getElementById('rateUSD').textContent = '—';
+    document.getElementById('rateEUR').textContent = '—';
+    document.getElementById('rateGold').textContent = '—';
+    document.getElementById('marketTime').textContent = 'kur alınamadı';
+    return;
+  }
+  document.getElementById('rateUSD').textContent = '₺' + fmtNum(rates.tryPerUsd, 2);
+  document.getElementById('rateEUR').textContent = '₺' + fmtNum(rates.tryPerEur, 2);
+  if (rates.goldGramTRY) {
+    document.getElementById('rateGold').textContent = '₺' + fmtNum(rates.goldGramTRY, 0);
+  } else {
+    document.getElementById('rateGold').textContent = '—';
+  }
+  const d = new Date();
+  document.getElementById('marketTime').textContent =
+    d.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) + ' · ' + rates.date;
+}
+
+// ============ RENDER: LIST ============
+function render() {
+  const now = new Date();
+  document.getElementById('dateStamp').textContent =
+    now.toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'}).toUpperCase();
+
+  const contacts = store.contacts || [];
+
+  // Stats
+  let total = 0, paidTotal = 0, overdueTotal = 0;
+  let activePeople = new Set();
+  contacts.forEach(c => {
+    const t = contactTotals(c);
+    total += t.balance;
+    paidTotal += t.paid;
+    if (contactHasOverdue(c)) overdueTotal += t.balance;
+    if (t.balance > 0) activePeople.add(c.id);
+  });
+  document.getElementById('sumTotal').textContent = Number(total).toLocaleString('tr-TR', {maximumFractionDigits: 0});
+  document.getElementById('sumPeople').textContent = activePeople.size + ' kişi';
+  document.getElementById('sumPaid').textContent = fmtTL(paidTotal) + ' tahsil';
+  document.getElementById('sumOverdue').textContent = fmtTL(overdueTotal) + ' gecikmiş';
+
+  // Counts
+  const cActive = contacts.filter(contactIsActive).length;
+  const cOver = contacts.filter(contactHasOverdue).length;
+  const cSet = contacts.filter(contactIsSettled).length;
+  document.getElementById('cntActive').textContent = cActive;
+  document.getElementById('cntOverdue').textContent = cOver;
+  document.getElementById('cntSettled').textContent = cSet;
+  document.getElementById('cntAll').textContent = contacts.length;
+
+  // Filter
+  let shown = [];
+  if (filter === 'active') shown = contacts.filter(contactIsActive);
+  else if (filter === 'overdue') shown = contacts.filter(contactHasOverdue);
+  else if (filter === 'settled') shown = contacts.filter(contactIsSettled);
+  else shown = [...contacts];
+
+  // Sort: overdue → balance desc → name
+  shown.sort((a, b) => {
+    const aO = contactHasOverdue(a), bO = contactHasOverdue(b);
+    if (aO && !bO) return -1;
+    if (!aO && bO) return 1;
+    const aB = contactTotals(a).balance;
+    const bB = contactTotals(b).balance;
+    if (Math.abs(aB - bB) > 0.01) return bB - aB;
+    return a.name.localeCompare(b.name, 'tr');
+  });
+
+  document.getElementById('sectionCount').textContent = shown.length + ' kayıt';
+
+  const list = document.getElementById('contactList');
+  if (shown.length === 0) {
+    const msg = contacts.length === 0
+      ? 'Henüz cari kayıt yok.<br>Aşağıdaki butondan ilk kişiyi ekle.'
+      : (filter === 'settled' ? 'Henüz kapanmış hesap yok.' :
+         filter === 'overdue' ? 'Harika — vadesi geçen hesap yok.' : 'Açık hesap yok.');
+    list.innerHTML = `<div class="empty"><div class="empty-mark">∅</div><div class="empty-title">${filter === 'settled' ? 'Kapalı hesap yok' : filter === 'overdue' ? 'Temiz sayfa' : 'Boş'}</div><div class="empty-sub">${msg}</div></div>`;
+    return;
+  }
+
+  list.innerHTML = shown.map(c => {
+    const t = contactTotals(c);
+    const settled = contactIsSettled(c);
+    const overdue = contactHasOverdue(c);
+    const txCount = (c.txs || []).length;
+    const lastTxDate = (c.txs || []).length > 0
+      ? [...c.txs].sort((a,b) => b.date.localeCompare(a.date))[0].date
+      : null;
+
+    return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-id="${c.id}">
+      <div class="contact-avatar">${initials(c.name)}</div>
+      <div class="contact-main">
+        <div class="contact-name">${escapeHtml(c.name)}</div>
+        <div class="contact-meta">
+          ${txCount} hareket
+          ${lastTxDate ? `<span class="dot">·</span>son ${fmtDateShort(lastTxDate)}` : ''}
+        </div>
+      </div>
+      <div class="contact-amount">
+        <div class="main">${fmtTL(settled ? t.debt : t.balance)}</div>
+        ${t.paid > 0 && !settled ? `<div class="sub">${fmtTL(t.paid)} ödendi</div>` : (settled ? '<div class="sub">kapandı</div>' : '')}
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.contact').forEach(el => {
+    el.addEventListener('click', () => openAccount(el.dataset.id));
+  });
+}
+
+// ============ FILTERS ============
+document.querySelectorAll('.filter').forEach(f => {
+  f.addEventListener('click', () => {
+    document.querySelectorAll('.filter').forEach(x => x.classList.remove('active'));
+    f.classList.add('active');
+    filter = f.dataset.filter;
+    render();
+  });
+});
+
+// ============ CONTACT FORM ============
+const scrimContact = document.getElementById('scrimContact');
+
+function openContactForm(id) {
+  editingContactId = id || null;
+  const c = id ? store.contacts.find(x => x.id === id) : null;
+  document.getElementById('contactFormTitle').innerHTML = c ? 'Cariyi <em>düzenle</em>' : 'Yeni <em>cari</em>';
+  document.getElementById('cName').value = c ? c.name : '';
+  document.getElementById('cPhone').value = c && c.phone ? c.phone : '';
+  document.getElementById('cEmail').value = c && c.email ? c.email : '';
+  document.getElementById('cNotes').value = c && c.notes ? c.notes : '';
+  scrimContact.classList.add('open');
+  setTimeout(() => document.getElementById('cName').focus(), 250);
+}
+function closeContactForm() { scrimContact.classList.remove('open'); editingContactId = null; }
+
+document.getElementById('fabAdd').addEventListener('click', () => openContactForm());
+document.getElementById('contactCancel').addEventListener('click', closeContactForm);
+document.getElementById('contactClose').addEventListener('click', closeContactForm);
+scrimContact.addEventListener('click', e => { if (e.target === scrimContact) closeContactForm(); });
+
+document.getElementById('contactSave').addEventListener('click', () => {
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const email = document.getElementById('cEmail').value.trim();
+  const notes = document.getElementById('cNotes').value.trim();
+
+  if (!name) { toast('İsim gerekli', 'error'); return; }
+
+  if (editingContactId) {
+    const c = store.contacts.find(x => x.id === editingContactId);
+    c.name = name; c.phone = phone; c.email = email; c.notes = notes;
+    toast('Güncellendi', 'success');
+  } else {
+    store.contacts.push({
+      id: uid(), name, phone, email, notes,
+      txs: [], createdAt: Date.now()
+    });
+    toast('Cari eklendi', 'success');
+  }
+  persist(); render(); closeContactForm();
+});
+
+// ============ ACCOUNT DETAIL ============
+const scrimAccount = document.getElementById('scrimAccount');
+
+async function openAccount(id) {
+  currentContactId = id;
+  const c = store.contacts.find(x => x.id === id);
+  if (!c) return;
+
+  renderAccount(c);
+  scrimAccount.classList.add('open');
+  renderEquivalents(c);
+}
+
+function renderAccount(c) {
+  document.getElementById('aAvatar').textContent = initials(c.name);
+  document.getElementById('aName').textContent = c.name;
+
+  const contactBits = [];
+  if (c.phone) contactBits.push(`<a href="tel:${escapeHtml(c.phone)}">${escapeHtml(c.phone)}</a>`);
+  if (c.email) contactBits.push(`<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>`);
+  document.getElementById('aContact').innerHTML = contactBits.length ? contactBits.join(' · ') : '<span style="color: var(--faint);">iletişim bilgisi yok</span>';
+
+  const t = contactTotals(c);
+  document.getElementById('aBalance').textContent = Number(t.balance).toLocaleString('tr-TR', {maximumFractionDigits: 0});
+
+  const breakBits = [];
+  if (t.debt > 0) breakBits.push(`<span class="up">+${fmtTL(t.debt)} borç</span>`);
+  if (t.paid > 0) breakBits.push(`<span class="dn">−${fmtTL(t.paid)} ödendi</span>`);
+  document.getElementById('aBreak').innerHTML = breakBits.length ? breakBits.join('<br>') : '';
+
+  if (c.notes) {
+    const n = document.getElementById('aNotes');
+    n.style.display = '';
+    n.textContent = c.notes;
+  } else {
+    document.getElementById('aNotes').style.display = 'none';
+  }
+
+  renderTxList(c);
+}
+
+function renderTxList(c) {
+  const txs = [...(c.txs || [])].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  document.getElementById('txCount').textContent = txs.length + ' kayıt';
+
+  const el = document.getElementById('aTxList');
+  if (txs.length === 0) {
+    el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hareket yok. Üstteki butonlardan borç ya da ödeme ekleyin.</div>`;
+    return;
+  }
+
+  el.innerHTML = txs.map(tx => {
+    const isDebt = tx.type === 'debt';
+    const pills = [];
+    if (isDebt && tx.dueDate) {
+      const du = daysUntil(tx.dueDate);
+      if (du < 0) pills.push(`<span class="pill overdue">${Math.abs(du)}g gecikmiş</span>`);
+      else if (du <= 3) pills.push(`<span class="pill soon">${du === 0 ? 'bugün' : du + ' gün'}</span>`);
+      else pills.push(`<span class="pill">${du} gün</span>`);
+    }
+
+    return `<div class="tx" data-txid="${tx.id}">
+      <div class="tx-dot ${isDebt ? 'debt' : 'payment'}">${isDebt ? '+' : '−'}</div>
+      <div class="tx-body">
+        <div class="tx-label">${isDebt ? 'Borç verildi' : 'Ödeme alındı'}${tx.note ? ' · ' + escapeHtml(tx.note) : ''}</div>
+        <div class="tx-meta">
+          <span>${fmtDate(tx.date)}</span>
+          ${pills.join('')}
+          ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(Number(tx.amount) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(Number(tx.amount) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(Number(tx.amount) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
+        </div>
+      </div>
+      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtTL(tx.amount)}</div>
+    </div>
+    <div class="tx-actions">
+      <button class="btn btn-ghost btn-sm" data-act="edit" data-txid="${tx.id}">Düzenle</button>
+      <button class="btn btn-danger btn-sm" data-act="delete" data-txid="${tx.id}">Sil</button>
+    </div>`;
+  }).join('');
+
+  // Expand on click
+  el.querySelectorAll('.tx').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      el.querySelectorAll('.tx').forEach(r => { if (r !== row) r.classList.remove('expanded'); });
+      row.classList.toggle('expanded');
+    });
+  });
+  el.querySelectorAll('[data-act]').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const txid = b.dataset.txid;
+      if (b.dataset.act === 'edit') editTx(txid);
+      else if (b.dataset.act === 'delete') deleteTx(txid);
+    });
+  });
+}
+
+async function renderEquivalents(c) {
+  const t = contactTotals(c);
+  const el = document.getElementById('aEquiv');
+  const foot = document.getElementById('aEquivFoot');
+
+  if (t.balance <= 0.01) {
+    el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Bakiye sıfır</div>`;
+    foot.textContent = '—';
+    return;
+  }
+
+  // Identify "open debts" FIFO: which debts are still unpaid & their snapshots weighted by remaining
+  const debts = (c.txs || []).filter(x => x.type === 'debt').sort((a,b) => a.date.localeCompare(b.date));
+  let paidRem = t.paid;
+  const openSlices = []; // { amount, snapshot, date }
+  for (const d of debts) {
+    const amt = Number(d.amount);
+    if (paidRem >= amt) { paidRem -= amt; continue; }
+    const unpaid = amt - paidRem;
+    paidRem = 0;
+    openSlices.push({ amount: unpaid, snapshot: d.snapshot, date: d.date });
+  }
+
+  if (openSlices.length === 0) {
+    el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Açık borç yok</div>`;
+    foot.textContent = '—';
+    return;
+  }
+
+  el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hesaplanıyor...</div>`;
+
+  try {
+    const today = todayRates || await getTodayRates();
+    if (!todayRates) { todayRates = today; renderMarket(today); }
+
+    // Weighted averages for THEN
+    let thenTotalTRY = 0;
+    let thenUSD = 0, thenEUR = 0, thenGold = 0;
+    let hasGold = true;
+    let anyApprox = false;
+    let earliestDate = null;
+    for (const s of openSlices) {
+      let snap = s.snapshot;
+      if (!snap || !snap.tryPerUsd) {
+        // fetch on the fly
+        snap = await getHistoricalRates(s.date);
+      }
+      thenTotalTRY += s.amount;
+      thenUSD += s.amount / snap.tryPerUsd;
+      thenEUR += s.amount / snap.tryPerEur;
+      if (snap.goldGramTRY) {
+        thenGold += s.amount / snap.goldGramTRY;
+        if (snap.goldApprox) anyApprox = true;
+      } else {
+        hasGold = false;
+      }
+      if (!earliestDate || s.date < earliestDate) earliestDate = s.date;
+    }
+
+    // Now values
+    const nowUSD = thenUSD * today.tryPerUsd;
+    const nowEUR = thenEUR * today.tryPerEur;
+    const nowGold = hasGold && today.goldGramTRY ? thenGold * today.goldGramTRY : null;
+
+    function delta(then, now) {
+      const pct = ((now - then) / then) * 100;
+      return { diff: now - then, pct };
+    }
+    function dhtml(d) {
+      if (Math.abs(d.pct) < 0.05) return '';
+      const up = d.diff > 0;
+      return `<div class="delta ${up ? 'up' : 'dn'}">${up ? '▲' : '▼'} ${Math.abs(d.pct).toFixed(1)}%</div>`;
+    }
+
+    // Weighted average rates for display
+    const avgUsdRate = thenTotalTRY / thenUSD;
+    const avgEurRate = thenTotalTRY / thenEUR;
+    const avgGoldRate = hasGold ? thenTotalTRY / thenGold : null;
+
+    let html = '';
+    if (hasGold) {
+      const dGold = delta(thenTotalTRY, nowGold);
+      html += `<div class="equiv-line">
+        <div class="equiv-asset"><div class="asset-chip gold">Au</div>Altın</div>
+        <div class="equiv-val">
+          <div class="q">${fmtNum(thenGold, 2)}g</div>
+          <div class="r">${fmtNum(avgGoldRate, 0)} ₺/g${anyApprox ? ' ≈' : ''}</div>
+        </div>
+        <div class="equiv-val">
+          <div class="q">${fmtTL(nowGold)}</div>
+          ${dhtml(dGold)}
+        </div>
+      </div>`;
+    }
+    const dUsd = delta(thenTotalTRY, nowUSD);
+    html += `<div class="equiv-line">
+      <div class="equiv-asset"><div class="asset-chip usd">$</div>Dolar</div>
+      <div class="equiv-val">
+        <div class="q">$${fmtNum(thenUSD, 0)}</div>
+        <div class="r">${fmtNum(avgUsdRate, 2)} ₺/$</div>
+      </div>
+      <div class="equiv-val">
+        <div class="q">${fmtTL(nowUSD)}</div>
+        ${dhtml(dUsd)}
+      </div>
+    </div>`;
+    const dEur = delta(thenTotalTRY, nowEUR);
+    html += `<div class="equiv-line">
+      <div class="equiv-asset"><div class="asset-chip eur">€</div>Euro</div>
+      <div class="equiv-val">
+        <div class="q">€${fmtNum(thenEUR, 0)}</div>
+        <div class="r">${fmtNum(avgEurRate, 2)} ₺/€</div>
+      </div>
+      <div class="equiv-val">
+        <div class="q">${fmtTL(nowEUR)}</div>
+        ${dhtml(dEur)}
+      </div>
+    </div>`;
+
+    el.innerHTML = html;
+
+    let footTxt = `Açık borç: ${fmtTL(thenTotalTRY)} · ${openSlices.length > 1 ? `${openSlices.length} parça, ağırlıklı ortalama` : `ilk borç ${fmtDate(earliestDate)}`} · Bugün ${today.date}`;
+    if (anyApprox) footTxt += ' · altın ≈';
+    foot.textContent = footTxt;
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
+    foot.textContent = '—';
+  }
+}
+
+document.getElementById('accountClose').addEventListener('click', () => scrimAccount.classList.remove('open'));
+scrimAccount.addEventListener('click', e => { if (e.target === scrimAccount) scrimAccount.classList.remove('open'); });
+
+document.getElementById('aRefresh').addEventListener('click', async () => {
+  localStorage.removeItem(RATES_KEY);
+  todayRates = null;
+  try {
+    const r = await getTodayRates();
+    todayRates = r;
+    renderMarket(r);
+    const c = store.contacts.find(x => x.id === currentContactId);
+    if (c) renderEquivalents(c);
+    toast('Kurlar yenilendi', 'success');
+  } catch(e) { toast('Kur alınamadı', 'error'); }
+});
+
+document.getElementById('aEdit').addEventListener('click', () => {
+  const id = currentContactId;
+  scrimAccount.classList.remove('open');
+  setTimeout(() => openContactForm(id), 200);
+});
+
+document.getElementById('aDelete').addEventListener('click', () => {
+  const c = store.contacts.find(x => x.id === currentContactId);
+  if (!c) return;
+  const t = contactTotals(c);
+  const warn = t.balance > 0.01 ? ` Bu carinin ${fmtTL(t.balance)} açık bakiyesi var.` : '';
+  if (confirm(`"${c.name}" cari kaydı ve tüm hareketleri silinsin mi?${warn}`)) {
+    store.contacts = store.contacts.filter(x => x.id !== currentContactId);
+    persist(); render();
+    scrimAccount.classList.remove('open');
+    toast('Silindi', 'success');
+  }
+});
+
+// ============ TRANSACTION SHEET ============
+const scrimTx = document.getElementById('scrimTx');
+
+function openTxSheet(mode, existingTx = null) {
+  txMode = existingTx ? { edit: existingTx.id, type: existingTx.type } : mode;
+  const isDebt = (existingTx ? existingTx.type : mode) === 'debt';
+
+  document.getElementById('txTitle').innerHTML = existingTx
+    ? `Hareketi <em>düzenle</em>`
+    : (isDebt ? 'Borç <em>ver</em>' : 'Ödeme <em>al</em>');
+  document.getElementById('txSub').textContent = isDebt ? 'Bu kişiye yeni borç ekle' : 'Bu kişiden tahsil edilen tutar';
+
+  document.getElementById('txAmount').value = existingTx ? existingTx.amount : '';
+  document.getElementById('txDate').value = existingTx ? existingTx.date : todayISO();
+  document.getElementById('txDue').value = existingTx && existingTx.dueDate ? existingTx.dueDate : '';
+  document.getElementById('txNote').value = existingTx && existingTx.note ? existingTx.note : '';
+  document.getElementById('txDueField').style.display = isDebt ? '' : 'none';
+  document.getElementById('txHint').style.display = 'none';
+
+  scrimTx.classList.add('open');
+  setTimeout(() => document.getElementById('txAmount').focus(), 250);
+  updateTxHint();
+}
+
+function closeTxSheet() { scrimTx.classList.remove('open'); txMode = null; }
+
+async function updateTxHint() {
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(async () => {
+    const amt = parseFloat(document.getElementById('txAmount').value);
+    const dt = document.getElementById('txDate').value;
+    const box = document.getElementById('txHint');
+    const body = document.getElementById('txHintBody');
+    if (!amt || amt <= 0 || !dt) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    body.className = 'hint-loading';
+    body.textContent = 'Kurlar hesaplanıyor...';
+    try {
+      const r = await getHistoricalRates(dt);
+      if (!r.tryPerUsd) throw 0;
+      const usd = amt / r.tryPerUsd;
+      const eur = amt / r.tryPerEur;
+      const gold = r.goldGramTRY ? amt / r.goldGramTRY : null;
+      body.className = 'hint-grid';
+      let html = `
+        <div class="hint-cell"><div class="sym">DOLAR</div><div class="val">$${fmtNum(usd, 0)}</div></div>
+        <div class="hint-cell"><div class="sym">EURO</div><div class="val">€${fmtNum(eur, 0)}</div></div>`;
+      if (gold !== null) {
+        html += `<div class="hint-cell"><div class="sym">ALTIN${r.goldApprox ? ' ≈' : ''}</div><div class="val">${fmtNum(gold, 2)}g</div></div>`;
+      }
+      body.innerHTML = html;
+
+      // Footer with rates
+      const foot = document.createElement('div');
+      foot.className = 'hint-footer';
+      let ft = `${r.date} · $${fmtNum(r.tryPerUsd, 2)} · €${fmtNum(r.tryPerEur, 2)}`;
+      if (r.goldGramTRY) ft += ` · ${fmtNum(r.goldGramTRY, 0)}₺/g`;
+      foot.textContent = ft;
+      body.appendChild(foot);
+    } catch(e) {
+      body.className = 'hint-loading';
+      body.textContent = 'Kur alınamadı. Kayıt yine de yapılabilir.';
+    }
+  }, 400);
+}
+
+document.getElementById('txAmount').addEventListener('input', updateTxHint);
+document.getElementById('txDate').addEventListener('change', updateTxHint);
+document.getElementById('addDebtBtn').addEventListener('click', () => openTxSheet('debt'));
+document.getElementById('addPayBtn').addEventListener('click', () => openTxSheet('payment'));
+document.getElementById('txCancel').addEventListener('click', closeTxSheet);
+document.getElementById('txClose').addEventListener('click', closeTxSheet);
+scrimTx.addEventListener('click', e => { if (e.target === scrimTx) closeTxSheet(); });
+
+document.getElementById('txSave').addEventListener('click', async () => {
+  const c = store.contacts.find(x => x.id === currentContactId);
+  if (!c) return;
+
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const date = document.getElementById('txDate').value;
+  const dueDate = document.getElementById('txDue').value;
+  const note = document.getElementById('txNote').value.trim();
+
+  if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
+  if (!date) { toast('Tarih gerekli', 'error'); return; }
+
+  const isEdit = txMode && txMode.edit;
+  const type = isEdit ? txMode.type : txMode;
+
+  // Warn if payment > current balance (but allow)
+  if (type === 'payment' && !isEdit) {
+    const t = contactTotals(c);
+    if (amount > t.balance + 0.01) {
+      if (!confirm(`Ödeme (${fmtTL(amount)}) kalan bakiyeden (${fmtTL(t.balance)}) fazla. Devam edilsin mi?`)) return;
+    }
+  }
+
+  // Fetch snapshot for debt txs
+  let snapshot = null;
+  if (type === 'debt') {
+    try { snapshot = await getHistoricalRates(date); } catch(e) {}
+  }
+
+  if (isEdit) {
+    const tx = c.txs.find(x => x.id === txMode.edit);
+    tx.amount = amount; tx.date = date; tx.note = note;
+    if (type === 'debt') {
+      tx.dueDate = dueDate;
+      if (snapshot && (!tx.snapshot || tx.snapshot.requestedDate !== date)) tx.snapshot = snapshot;
+    }
+    toast('Güncellendi', 'success');
+  } else {
+    const tx = { id: uid(), type, amount, date, note };
+    if (type === 'debt') { tx.dueDate = dueDate; tx.snapshot = snapshot; }
+    c.txs = c.txs || [];
+    c.txs.push(tx);
+    toast(type === 'debt' ? 'Borç kaydedildi' : 'Ödeme kaydedildi', 'success');
+  }
+  persist();
+  renderAccount(c);
+  renderEquivalents(c);
+  render();
+  closeTxSheet();
+});
+
+function editTx(txid) {
+  const c = store.contacts.find(x => x.id === currentContactId);
+  const tx = c && c.txs.find(x => x.id === txid);
+  if (!tx) return;
+  openTxSheet(tx.type, tx);
+}
+function deleteTx(txid) {
+  const c = store.contacts.find(x => x.id === currentContactId);
+  const tx = c && c.txs.find(x => x.id === txid);
+  if (!tx) return;
+  if (confirm(`Bu ${tx.type === 'debt' ? 'borç' : 'ödeme'} kaydı silinsin mi? (${fmtTL(tx.amount)})`)) {
+    c.txs = c.txs.filter(x => x.id !== txid);
+    persist();
+    renderAccount(c);
+    renderEquivalents(c);
+    render();
+    toast('Silindi', 'success');
+  }
+}
+
+// ============ INIT ============
+load();
+render();
+
+(async () => {
+  try {
+    todayRates = await getTodayRates();
+    renderMarket(todayRates);
+  } catch(e) {
+    renderMarket(null);
+    console.warn('Rates failed', e);
+  }
+})();
+
+document.querySelectorAll('.sheet').forEach(m => {
+  m.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
+});
+</script>
+</body>
+</html>
