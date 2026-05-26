@@ -1203,7 +1203,7 @@
 // ============ STORE ============
 const KEY = 'cari_defter_v3';
 const RATES_KEY = 'cari_rates_cache_v2';
-const RATES_TTL = 30 * 60 * 1000;
+const RATES_TTL = 15 * 60 * 1000;
 
 // Data model:
 // {
@@ -1346,24 +1346,78 @@ async function fetchGoldOz() {
   return Number(j.price);
 }
 
+// Parse a numeric value that may arrive as a JS number, a dot-decimal
+// string ("32.45"), or a Turkish-formatted string ("1.234,56").
+function parseRateNum(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return NaN;
+  let s = v.trim();
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  return parseFloat(s);
+}
+
+// Pull a single rate from a truncgil entry, tolerating English/Turkish
+// field names. Uses the mid of buy/sell when both exist.
+function pickTruncgilRate(entry) {
+  if (!entry || typeof entry !== 'object') return NaN;
+  const sell = parseRateNum(entry.Selling ?? entry.Satış ?? entry.satis ?? entry.selling);
+  const buy  = parseRateNum(entry.Buying  ?? entry.Alış  ?? entry.alis  ?? entry.buying);
+  if (!isNaN(sell) && !isNaN(buy)) return (sell + buy) / 2;
+  if (!isNaN(sell)) return sell;
+  return buy;
+}
+
+// Türkiye piyasası: güncel USD, EUR ve gram altın tek çağrıda.
+async function fetchTruncgil() {
+  const res = await fetch('https://finans.truncgil.com/v4/today.json', { cache: 'no-store' });
+  if (!res.ok) throw new Error('truncgil ' + res.status);
+  const j = await res.json();
+  const usd = pickTruncgilRate(j.USD);
+  const eur = pickTruncgilRate(j.EUR);
+  let gram = NaN;
+  for (const k of ['GRA', 'gram-altin', 'GRAM_ALTIN', 'gram_altin', 'GRAMALTIN']) {
+    if (j[k]) { gram = pickTruncgilRate(j[k]); if (!isNaN(gram)) break; }
+  }
+  if (isNaN(usd) || isNaN(eur)) throw new Error('truncgil parse');
+  return {
+    date: todayISO(),
+    tryPerUsd: usd,
+    tryPerEur: eur,
+    goldOzUSD: null,
+    goldGramTRY: isNaN(gram) ? null : gram,
+    source: 'truncgil',
+    updateDate: j.Update_Date || (j.Meta_Data && j.Meta_Data.Update_Date) || null,
+    fetchedAt: new Date().toISOString()
+  };
+}
+
 async function getTodayRates() {
   try {
     const c = JSON.parse(localStorage.getItem(RATES_KEY));
     if (c && Date.now() - c.ts < RATES_TTL) return c.rates;
   } catch(e){}
 
-  const [fx, oz] = await Promise.all([
-    fetchFx(todayISO()),
-    fetchGoldOz().catch(() => null)
-  ]);
-  const rates = {
-    date: fx.date,
-    tryPerUsd: fx.tryPerUsd,
-    tryPerEur: fx.tryPerEur,
-    goldOzUSD: oz,
-    goldGramTRY: oz ? (oz / OZ) * fx.tryPerUsd : null,
-    fetchedAt: new Date().toISOString()
-  };
+  let rates;
+  try {
+    // Türkiye piyasa kuru (güncel USD/EUR + gram altın).
+    rates = await fetchTruncgil();
+  } catch(e) {
+    // Yedek: ECB referans kuru + uluslararası ons altın.
+    console.warn('truncgil failed, falling back to ECB/gold-api', e);
+    const [fx, oz] = await Promise.all([
+      fetchFx(todayISO()),
+      fetchGoldOz().catch(() => null)
+    ]);
+    rates = {
+      date: fx.date,
+      tryPerUsd: fx.tryPerUsd,
+      tryPerEur: fx.tryPerEur,
+      goldOzUSD: oz,
+      goldGramTRY: oz ? (oz / OZ) * fx.tryPerUsd : null,
+      source: 'ecb',
+      fetchedAt: new Date().toISOString()
+    };
+  }
   localStorage.setItem(RATES_KEY, JSON.stringify({ts: Date.now(), rates}));
   return rates;
 }
@@ -1416,8 +1470,9 @@ function renderMarket(rates) {
     document.getElementById('rateGold').textContent = '—';
   }
   const d = new Date();
+  const stamp = rates.updateDate || rates.date;
   document.getElementById('marketTime').textContent =
-    d.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) + ' · ' + rates.date;
+    d.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) + ' · ' + stamp;
 }
 
 // ============ RENDER: LIST ============
