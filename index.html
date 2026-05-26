@@ -1361,7 +1361,10 @@
         <div class="equiv-section">
           <div class="equiv-head">
             <div class="equiv-title">Değer karşılıkları</div>
-            <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
+            <div style="display:flex;gap:14px;">
+              <button class="equiv-refresh" id="aFxEdit">el ile gir</button>
+              <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
+            </div>
           </div>
           <div class="equiv-table">
             <div class="equiv-colhead">
@@ -1632,7 +1635,10 @@
         <div class="equiv-section">
           <div class="equiv-head">
             <div class="equiv-title">Kur karşılığı · kâr / zarar</div>
-            <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
+            <div style="display:flex;gap:14px;">
+              <button class="equiv-refresh" id="dFxEdit">el ile gir</button>
+              <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
+            </div>
           </div>
           <div class="equiv-table">
             <div class="equiv-colhead">
@@ -1789,6 +1795,45 @@
   </div>
 </div>
 
+<!-- ============ VERİLDİĞİNDE DEĞERLERİ (manuel) SHEET ============ -->
+<div class="scrim" id="scrimFx">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Verildiğinde <em>değerleri</em></div>
+        <div class="sheet-sub">El ile gir · boş bırakılan otomatik hesaplanır</div>
+      </div>
+      <button class="sheet-close" id="fxClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div style="background:var(--ochre-bg);border:1px solid var(--hair-2);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--ink-2);margin-bottom:14px;">
+        Borcun verildiği tarihteki miktarı ve 1 birimin kaç TL ettiğini kendin girebilirsin. Doldurduğun değerler "Verildiğinde" sütununda otomatik hesabın yerine kullanılır.
+      </div>
+      <div class="field-label">Euro</div>
+      <div class="field-row">
+        <div class="field"><input type="number" class="field-input" id="fx_eur_qty" placeholder="miktar (€)" inputmode="decimal" step="0.01"></div>
+        <div class="field"><input type="number" class="field-input" id="fx_eur_rate" placeholder="₺ / €" inputmode="decimal" step="0.01"></div>
+      </div>
+      <div class="field-label" style="margin-top:12px;">Dolar</div>
+      <div class="field-row">
+        <div class="field"><input type="number" class="field-input" id="fx_usd_qty" placeholder="miktar ($)" inputmode="decimal" step="0.01"></div>
+        <div class="field"><input type="number" class="field-input" id="fx_usd_rate" placeholder="₺ / $" inputmode="decimal" step="0.01"></div>
+      </div>
+      <div class="field-label" style="margin-top:12px;">Altın</div>
+      <div class="field-row">
+        <div class="field"><input type="number" class="field-input" id="fx_gold_qty" placeholder="miktar (gram)" inputmode="decimal" step="0.01"></div>
+        <div class="field"><input type="number" class="field-input" id="fx_gold_rate" placeholder="₺ / gram" inputmode="decimal" step="0.01"></div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="fxClear">Temizle</button>
+      <button class="btn btn-ghost" id="fxCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="fxSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1814,6 +1859,8 @@ let mode = 'receivables'; // 'receivables' | 'debts'
 let debtFilter = 'active';
 let dPlan = 'installment'; // borç formu: 'installment' | 'flat'
 let editingRates = { yasal: [], avans: [] };
+let lastFxResults = null;
+let fxEditCtx = null;
 let editingContactId = null;
 let currentContactId = null;
 let editingDebtId = null;
@@ -2649,7 +2696,7 @@ function renderTxList(c) {
 // Ortak FX: ana para ve ödemelerin TL karşılıklarını, her birinin kendi
 // tarihindeki kurdan döviz/altına çevirip kalan döviz bakiyesini ve bugünkü
 // TL değerini hesaplar. Ödemeler ödeme tarihindeki kurdan düşülür.
-async function fxRunningBalance(principal, payments) {
+async function fxRunningBalance(principal, payments, manual) {
   const today = todayRates || await getTodayRates();
   if (!todayRates) { todayRates = today; renderMarket(today); }
   const dates = new Set();
@@ -2681,14 +2728,22 @@ async function fxRunningBalance(principal, payments) {
       if (!r) { ok = false; break; }
       units -= e.try / r;
     }
-    if (!ok) continue;
+    let thenRate = ok ? (curRateAt(snaps[refDate], a.cur) || a.todayRate) : a.todayRate;
+    const mo = manual && manual[a.key];
+    if (!ok && !mo) continue;
     units = Math.max(0, units);
-    const thenRate = curRateAt(snaps[refDate], a.cur) || a.todayRate;
+    // Manuel "verildiğinde" override (miktar ve/veya kur)
+    if (mo) {
+      if (mo.qty != null && !isNaN(mo.qty)) units = Number(mo.qty);
+      if (mo.rate != null && !isNaN(mo.rate)) thenRate = Number(mo.rate);
+    }
     results.push({
       key: a.key, chip: a.chip, name: a.name, q: a.fmt(units), units,
+      thenRate,
       rateLabel: a.rateFmt(thenRate),       // borcun verildiği tarihteki kur
       thenTL: units * thenRate,
-      nowTL: units * a.todayRate
+      nowTL: units * a.todayRate,
+      manual: !!mo
     });
   }
   return { today, refDate, results };
@@ -2727,7 +2782,8 @@ async function renderEquivalents(c) {
   try {
     const principal = (c.txs || []).filter(x => x.type === 'debt').map(x => ({ try: tryOf(x), date: x.date }));
     const payments = (c.txs || []).filter(x => x.type === 'payment').map(x => ({ try: tryOf(x), date: x.date }));
-    const { today, results } = await fxRunningBalance(principal, payments);
+    const { today, results } = await fxRunningBalance(principal, payments, c.fxManual);
+    lastFxResults = results;
     if (!results.length) {
       el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Kur alınamadı.</div>`;
       foot.textContent = '—';
@@ -3327,7 +3383,8 @@ async function renderDebtEquiv(d) {
     const startDate = debtStartDate(d);
     const principal = [{ try: debtTotals(d).total, date: startDate }];
     const payments = debtReductions(d).map(r => ({ try: r.amount, date: r.date }));
-    const { today, results } = await fxRunningBalance(principal, payments);
+    const { today, results } = await fxRunningBalance(principal, payments, d.fxManual);
+    lastFxResults = results;
     if (!results.length) {
       el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Kur alınamadı.</div>`;
       foot.textContent = '—';
@@ -3506,6 +3563,62 @@ document.getElementById('newBankName').addEventListener('keydown', e => { if (e.
 document.getElementById('banksClose').addEventListener('click', closeBanks);
 document.getElementById('banksDone').addEventListener('click', closeBanks);
 scrimBanks.addEventListener('click', e => { if (e.target === scrimBanks) closeBanks(); });
+
+// ============ VERİLDİĞİNDE DEĞERLERİ (manuel override) ============
+const scrimFx = document.getElementById('scrimFx');
+function fxEntity() {
+  if (!fxEditCtx) return null;
+  return fxEditCtx.kind === 'contact'
+    ? store.contacts.find(x => x.id === fxEditCtx.id)
+    : store.debts.find(x => x.id === fxEditCtx.id);
+}
+function openFxEditor(kind, id) {
+  fxEditCtx = { kind, id };
+  const ent = fxEntity();
+  const man = (ent && ent.fxManual) || {};
+  const find = k => (lastFxResults || []).find(r => r.key === k);
+  [['gold', 2], ['usd', 0], ['eur', 0]].forEach(([k, dec]) => {
+    const r = find(k); const mo = man[k] || {};
+    document.getElementById('fx_' + k + '_qty').value = mo.qty != null ? mo.qty : (r ? +r.units.toFixed(dec) : '');
+    document.getElementById('fx_' + k + '_rate').value = mo.rate != null ? mo.rate : (r ? +r.thenRate.toFixed(2) : '');
+  });
+  scrimFx.classList.add('open');
+}
+function closeFx() { scrimFx.classList.remove('open'); }
+function rerenderFxEntity(ent) {
+  if (!ent || !fxEditCtx) return;
+  if (fxEditCtx.kind === 'contact') renderEquivalents(ent);
+  else renderDebtEquiv(ent);
+}
+document.getElementById('aFxEdit').addEventListener('click', () => { if (currentContactId) openFxEditor('contact', currentContactId); });
+document.getElementById('dFxEdit').addEventListener('click', () => { if (currentDebtId) openFxEditor('debt', currentDebtId); });
+document.getElementById('fxClose').addEventListener('click', closeFx);
+document.getElementById('fxCancel').addEventListener('click', closeFx);
+scrimFx.addEventListener('click', e => { if (e.target === scrimFx) closeFx(); });
+document.getElementById('fxSave').addEventListener('click', () => {
+  const ent = fxEntity();
+  if (!ent) { closeFx(); return; }
+  const man = {};
+  ['gold', 'usd', 'eur'].forEach(k => {
+    const q = parseFloat(document.getElementById('fx_' + k + '_qty').value);
+    const rt = parseFloat(document.getElementById('fx_' + k + '_rate').value);
+    const o = {};
+    if (!isNaN(q)) o.qty = q;
+    if (!isNaN(rt)) o.rate = rt;
+    if (o.qty != null || o.rate != null) man[k] = o;
+  });
+  if (Object.keys(man).length) ent.fxManual = man; else delete ent.fxManual;
+  persist();
+  closeFx();
+  rerenderFxEntity(ent);
+  toast('Kaydedildi', 'success');
+});
+document.getElementById('fxClear').addEventListener('click', () => {
+  const ent = fxEntity();
+  if (ent) { delete ent.fxManual; persist(); rerenderFxEntity(ent); }
+  closeFx();
+  toast('Otomatik hesaba dönüldü', 'success');
+});
 
 document.getElementById('dRefresh').addEventListener('click', async () => {
   localStorage.removeItem(RATES_KEY);
