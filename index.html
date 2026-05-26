@@ -1396,7 +1396,7 @@
         </div>
       </div>
       <div class="field">
-        <label class="field-label">Borç tarihi (kur için) *</label>
+        <label class="field-label">Borcun alındığı tarih *</label>
         <input type="date" class="field-input" id="dStartDate">
       </div>
       <div class="field">
@@ -2693,15 +2693,16 @@ function renderDebtDetail(d) {
   const planTitle = document.getElementById('dPlanTitle');
   const payActions = document.getElementById('dPayActions');
   const foot = document.getElementById('dDetailFoot');
+  const takenOn = ' · alındı ' + fmtDateShort(debtStartDate(d));
   if (d.plan === 'flat') {
-    document.getElementById('dDetailCat').textContent = cat.label + ' · tek seferlik';
+    document.getElementById('dDetailCat').textContent = cat.label + ' · tek seferlik' + takenOn;
     planTitle.textContent = 'Ödemeler';
     payActions.style.display = '';
     document.getElementById('dDetailProgress').textContent = `${fmtTL(t.paid)} / ${fmtTL(t.total)}`;
     foot.textContent = d.dueDate ? ('Vade: ' + fmtDate(d.dueDate)) : 'Vadesiz borç.';
     renderDebtPayments(d);
   } else {
-    document.getElementById('dDetailCat').textContent = cat.label + ' · taksitli';
+    document.getElementById('dDetailCat').textContent = cat.label + ' · taksitli' + takenOn;
     planTitle.textContent = 'Taksit planı';
     payActions.style.display = 'none';
     document.getElementById('dDetailProgress').textContent = `${t.paidCount}/${d.count} ödendi`;
