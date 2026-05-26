@@ -1380,12 +1380,27 @@
     <div class="sheet-body">
       <div class="field-row">
         <div class="field">
-          <label class="field-label">Tutar (₺) *</label>
+          <label class="field-label" id="txAmountLabel">Tutar (₺) *</label>
           <input type="number" class="field-input" id="txAmount" placeholder="0" inputmode="decimal" step="0.01">
         </div>
         <div class="field">
           <label class="field-label">Tarih *</label>
           <input type="date" class="field-input" id="txDate">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Para birimi</label>
+          <select class="field-input" id="txCur">
+            <option value="TRY">₺ Türk Lirası</option>
+            <option value="USD">$ Dolar</option>
+            <option value="EUR">€ Euro</option>
+            <option value="GOLD">Altın (gram)</option>
+          </select>
+        </div>
+        <div class="field" id="txTryField" style="display:none;">
+          <label class="field-label">TL karşılığı (₺) *</label>
+          <input type="number" class="field-input" id="txTry" placeholder="0" inputmode="decimal" step="0.01">
         </div>
       </div>
       <div class="field" id="txDueField">
@@ -1470,12 +1485,27 @@
       <div id="dFlatFields" style="display:none;">
         <div class="field-row">
           <div class="field">
-            <label class="field-label">Toplam tutar (₺) *</label>
+            <label class="field-label" id="dTotalLabel">Toplam tutar (₺) *</label>
             <input type="number" class="field-input" id="dTotal" placeholder="0" inputmode="decimal" step="0.01">
           </div>
           <div class="field">
             <label class="field-label">Vade tarihi (opsiyonel)</label>
             <input type="date" class="field-input" id="dDueDate">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Para birimi</label>
+            <select class="field-input" id="dCur">
+              <option value="TRY">₺ Türk Lirası</option>
+              <option value="USD">$ Dolar</option>
+              <option value="EUR">€ Euro</option>
+              <option value="GOLD">Altın (gram)</option>
+            </select>
+          </div>
+          <div class="field" id="dTryField" style="display:none;">
+            <label class="field-label">TL karşılığı (₺) *</label>
+            <input type="number" class="field-input" id="dTotalTry" placeholder="0" inputmode="decimal" step="0.01">
           </div>
         </div>
       </div>
@@ -1621,12 +1651,27 @@
     <div class="sheet-body">
       <div class="field-row">
         <div class="field">
-          <label class="field-label">Tutar (₺) *</label>
+          <label class="field-label" id="dpAmountLabel">Tutar (₺) *</label>
           <input type="number" class="field-input" id="dpAmount" placeholder="0" inputmode="decimal" step="0.01">
         </div>
         <div class="field">
           <label class="field-label">Tarih *</label>
           <input type="date" class="field-input" id="dpDate">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Para birimi</label>
+          <select class="field-input" id="dpCur">
+            <option value="TRY">₺ Türk Lirası</option>
+            <option value="USD">$ Dolar</option>
+            <option value="EUR">€ Euro</option>
+            <option value="GOLD">Altın (gram)</option>
+          </select>
+        </div>
+        <div class="field" id="dpTryField" style="display:none;">
+          <label class="field-label">TL karşılığı (₺) *</label>
+          <input type="number" class="field-input" id="dpTry" placeholder="0" inputmode="decimal" step="0.01">
         </div>
       </div>
       <div class="field">
@@ -1787,11 +1832,36 @@ function escapeHtml(s) {
 }
 
 // Contact aggregate calculations
+// ---- Çoklu para birimi (TL / USD / EUR / altın gram) ----
+const CUR_SYM = { TRY: '₺', USD: '$', EUR: '€', GOLD: 'g' };
+// Bir kaydın TL karşılığı (try alanı varsa onu, yoksa amount = TL kabul edilir)
+function tryOf(e) {
+  if (!e) return 0;
+  return e.try != null ? Number(e.try) : (Number(e.amount) || 0);
+}
+function curRateAt(snap, cur) {
+  if (!snap) return null;
+  if (cur === 'USD') return snap.tryPerUsd;
+  if (cur === 'EUR') return snap.tryPerEur;
+  if (cur === 'GOLD') return snap.goldGramTRY;
+  return 1; // TRY
+}
+// Kaydın yerel (girilen) tutar gösterimi
+function fmtNative(e) {
+  const cur = e && e.cur ? e.cur : 'TRY';
+  const amt = Number(e.amount) || 0;
+  if (cur === 'TRY') return fmtTL(amt);
+  if (cur === 'GOLD') return fmtNum(amt, 2) + ' g altın';
+  return CUR_SYM[cur] + fmtNum(amt, amt % 1 ? 2 : 0);
+}
+// Yabancı para kaydı mı? (gösterimde TL karşılığını da yazmak için)
+function isForeign(e) { return e && e.cur && e.cur !== 'TRY'; }
+
 function contactTotals(c) {
   let debt = 0, paid = 0;
   (c.txs || []).forEach(t => {
-    if (t.type === 'debt') debt += Number(t.amount);
-    else if (t.type === 'payment') paid += Number(t.amount);
+    if (t.type === 'debt') debt += tryOf(t);
+    else if (t.type === 'payment') paid += tryOf(t);
   });
   return { debt, paid, balance: Math.max(0, debt - paid) };
 }
@@ -1811,7 +1881,7 @@ function contactHasOverdue(c) {
   const debts = (c.txs || []).filter(t => t.type === 'debt').sort((a,b) => a.date.localeCompare(b.date));
   let remainingPaid = paid;
   for (const d of debts) {
-    const amt = Number(d.amount);
+    const amt = tryOf(d);
     if (remainingPaid >= amt) {
       remainingPaid -= amt;
     } else {
@@ -1827,7 +1897,7 @@ function contactEarliestOpenDebtDate(c) {
   const paid = contactTotals(c).paid;
   let rem = paid;
   for (const d of debts) {
-    const amt = Number(d.amount);
+    const amt = tryOf(d);
     if (rem >= amt) rem -= amt;
     else return d.date;
   }
@@ -1875,8 +1945,8 @@ function debtSchedule(d) {
 }
 function debtTotals(d) {
   if (d.plan === 'flat') {
-    const total = Number(d.total) || 0;
-    const paid = (d.payments || []).reduce((s, p) => s + Number(p.amount), 0);
+    const total = d.totalTry != null ? Number(d.totalTry) : (Number(d.total) || 0);
+    const paid = (d.payments || []).reduce((s, p) => s + tryOf(p), 0);
     return { total, paid, remaining: Math.max(0, total - paid), paidCount: null };
   }
   const total = Number(d.amount) * d.count;
@@ -1984,6 +2054,59 @@ function initMethodField(prefix) {
 function methodText(o) { if (!o || !o.method) return ''; return o.method === 'banka' ? (o.bank || 'Banka') : 'Nakit'; }
 function methodPill(o) { const t = methodText(o); return t ? `<span class="pill">${escapeHtml(t)}</span>` : ''; }
 
+// Para birimi + TL karşılığı alanı (TL karşılığı tarihten otomatik gelir, elle de girilebilir)
+function curField(curId, amountId, dateId, tryId, tryFieldId, amountLabelId) {
+  let manual = false;
+  const el = id => document.getElementById(id);
+  function syncLabel(c) {
+    if (!amountLabelId) return;
+    el(amountLabelId).textContent = c === 'TRY' ? 'Tutar (₺) *'
+      : (c === 'GOLD' ? 'Tutar (gram) *' : 'Tutar (' + CUR_SYM[c] + ') *');
+  }
+  async function recompute() {
+    const c = el(curId).value;
+    const foreign = c !== 'TRY';
+    el(tryFieldId).style.display = foreign ? '' : 'none';
+    syncLabel(c);
+    if (!foreign || manual) return;
+    const amt = parseFloat(el(amountId).value);
+    const dt = el(dateId).value;
+    if (!amt || !dt) { el(tryId).value = ''; return; }
+    try {
+      const r = await getHistoricalRates(dt);
+      const rate = curRateAt(r, c);
+      el(tryId).value = rate ? Math.round(amt * rate) : '';
+    } catch(e) { el(tryId).value = ''; }
+  }
+  el(curId).addEventListener('change', () => { manual = false; recompute(); });
+  el(amountId).addEventListener('input', recompute);
+  el(dateId).addEventListener('change', recompute);
+  el(tryId).addEventListener('input', () => { manual = true; });
+  return {
+    set(cur, amount, tryVal) {
+      cur = cur || 'TRY';
+      el(curId).value = cur;
+      el(amountId).value = (amount != null && amount !== '') ? amount : '';
+      manual = false;
+      const foreign = cur !== 'TRY';
+      el(tryFieldId).style.display = foreign ? '' : 'none';
+      syncLabel(cur);
+      if (foreign) {
+        if (tryVal != null) { el(tryId).value = tryVal; manual = true; }
+        else recompute();
+      } else { el(tryId).value = ''; }
+    },
+    get() {
+      const c = el(curId).value || 'TRY';
+      const amt = parseFloat(el(amountId).value);
+      if (c === 'TRY') return { cur: 'TRY', amount: amt, try: amt };
+      const tv = parseFloat(el(tryId).value);
+      return { cur: c, amount: amt, try: isNaN(tv) ? null : tv };
+    }
+  };
+}
+let txCurF = null, dpCurF = null, dCurF = null;
+
 function dayDiff(a, b) {
   return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
 }
@@ -1994,7 +2117,7 @@ function rateAt(periods, dateISO) {
 }
 // Borcun ana parasını azaltan olaylar (ödemeler / ödenmiş taksitler)
 function debtReductions(d) {
-  if (d.plan === 'flat') return (d.payments || []).map(p => ({ date: p.date, amount: Number(p.amount) }));
+  if (d.plan === 'flat') return (d.payments || []).map(p => ({ date: p.date, amount: tryOf(p) }));
   return debtSchedule(d).filter(s => s.paid).map(s => ({ date: s.dueDate, amount: s.amount }));
 }
 // Borç tarihinden bugüne, bakiye azaldıkça dönemsel basit faiz
@@ -2381,12 +2504,13 @@ function renderTxList(c) {
         <div class="tx-label">${isDebt ? 'Borç verildi' : 'Ödeme alındı'}${tx.note ? ' · ' + escapeHtml(tx.note) : ''}</div>
         <div class="tx-meta">
           <span>${fmtDate(tx.date)}</span>
+          ${isForeign(tx) ? `<span class="pill">${fmtTL(tryOf(tx))}</span>` : ''}
           ${methodPill(tx)}
           ${pills.join('')}
-          ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(Number(tx.amount) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(Number(tx.amount) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(Number(tx.amount) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
+          ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(tryOf(tx) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(tryOf(tx) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(tryOf(tx) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
         </div>
       </div>
-      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtTL(tx.amount)}</div>
+      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtNative(tx)}</div>
     </div>
     <div class="tx-actions">
       <button class="btn btn-ghost btn-sm" data-act="edit" data-txid="${tx.id}">Düzenle</button>
@@ -2412,6 +2536,62 @@ function renderTxList(c) {
   });
 }
 
+// Ortak FX: ana para ve ödemelerin TL karşılıklarını, her birinin kendi
+// tarihindeki kurdan döviz/altına çevirip kalan döviz bakiyesini ve bugünkü
+// TL değerini hesaplar. Ödemeler ödeme tarihindeki kurdan düşülür.
+async function fxRunningBalance(principal, payments) {
+  const today = todayRates || await getTodayRates();
+  if (!todayRates) { todayRates = today; renderMarket(today); }
+  const dates = new Set();
+  principal.forEach(e => dates.add(e.date));
+  payments.forEach(e => dates.add(e.date));
+  const snaps = {};
+  for (const dt of dates) {
+    try { snaps[dt] = await getHistoricalRates(dt); } catch(e) { snaps[dt] = null; }
+  }
+  const defs = [
+    { key: 'gold', cur: 'GOLD', name: 'Altın', chip: 'Au', fmt: u => fmtNum(u, 2) + 'g', todayRate: today.goldGramTRY, rateLabel: today.goldGramTRY ? fmtNum(today.goldGramTRY, 0) + ' ₺/g' : '' },
+    { key: 'usd', cur: 'USD', name: 'Dolar', chip: '$', fmt: u => '$' + fmtNum(u, 0), todayRate: today.tryPerUsd, rateLabel: today.tryPerUsd ? fmtNum(today.tryPerUsd, 2) + ' ₺/$' : '' },
+    { key: 'eur', cur: 'EUR', name: 'Euro', chip: '€', fmt: u => '€' + fmtNum(u, 0), todayRate: today.tryPerEur, rateLabel: today.tryPerEur ? fmtNum(today.tryPerEur, 2) + ' ₺/€' : '' }
+  ];
+  const results = [];
+  for (const a of defs) {
+    if (!a.todayRate) continue;
+    let units = 0, ok = true;
+    for (const e of principal) {
+      const r = curRateAt(snaps[e.date], a.cur);
+      if (!r) { ok = false; break; }
+      units += e.try / r;
+    }
+    if (ok) for (const e of payments) {
+      const r = curRateAt(snaps[e.date], a.cur);
+      if (!r) { ok = false; break; }
+      units -= e.try / r;
+    }
+    if (!ok) continue;
+    units = Math.max(0, units);
+    results.push({ key: a.key, chip: a.chip, name: a.name, q: a.fmt(units), rateLabel: a.rateLabel, units, nowTL: units * a.todayRate });
+  }
+  return { today, results };
+}
+function fxRowsHtml(results, remainingTL, kind) {
+  return results.map(a => {
+    const pl = a.nowTL - remainingTL;
+    const pct = remainingTL > 0 ? (pl / remainingTL) * 100 : 0;
+    let plHtml = '';
+    if (Math.abs(pct) >= 0.05) {
+      const up = pl > 0;
+      const label = kind === 'debt' ? (up ? 'kâr +' : 'zarar −') : (up ? '+' : '−');
+      plHtml = `<div class="delta ${up ? 'up' : 'dn'}">${label}${fmtTL(Math.abs(pl))}</div>`;
+    }
+    return `<div class="equiv-line">
+      <div class="equiv-asset"><div class="asset-chip ${a.key}">${a.chip}</div>${a.name}</div>
+      <div class="equiv-val"><div class="q">${a.q}</div><div class="r">${a.rateLabel}</div></div>
+      <div class="equiv-val"><div class="q">${fmtTL(a.nowTL)}</div>${plHtml}</div>
+    </div>`;
+  }).join('');
+}
+
 async function renderEquivalents(c) {
   const t = contactTotals(c);
   const el = document.getElementById('aEquiv');
@@ -2423,119 +2603,19 @@ async function renderEquivalents(c) {
     return;
   }
 
-  // Identify "open debts" FIFO: which debts are still unpaid & their snapshots weighted by remaining
-  const debts = (c.txs || []).filter(x => x.type === 'debt').sort((a,b) => a.date.localeCompare(b.date));
-  let paidRem = t.paid;
-  const openSlices = []; // { amount, snapshot, date }
-  for (const d of debts) {
-    const amt = Number(d.amount);
-    if (paidRem >= amt) { paidRem -= amt; continue; }
-    const unpaid = amt - paidRem;
-    paidRem = 0;
-    openSlices.push({ amount: unpaid, snapshot: d.snapshot, date: d.date });
-  }
-
-  if (openSlices.length === 0) {
-    el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Açık borç yok</div>`;
-    foot.textContent = '—';
-    return;
-  }
-
   el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hesaplanıyor...</div>`;
 
   try {
-    const today = todayRates || await getTodayRates();
-    if (!todayRates) { todayRates = today; renderMarket(today); }
-
-    // Weighted averages for THEN
-    let thenTotalTRY = 0;
-    let thenUSD = 0, thenEUR = 0, thenGold = 0;
-    let hasGold = true;
-    let anyApprox = false;
-    let earliestDate = null;
-    for (const s of openSlices) {
-      let snap = s.snapshot;
-      if (!snap || !snap.tryPerUsd) {
-        // fetch on the fly
-        snap = await getHistoricalRates(s.date);
-      }
-      thenTotalTRY += s.amount;
-      thenUSD += s.amount / snap.tryPerUsd;
-      thenEUR += s.amount / snap.tryPerEur;
-      if (snap.goldGramTRY) {
-        thenGold += s.amount / snap.goldGramTRY;
-        if (snap.goldApprox) anyApprox = true;
-      } else {
-        hasGold = false;
-      }
-      if (!earliestDate || s.date < earliestDate) earliestDate = s.date;
+    const principal = (c.txs || []).filter(x => x.type === 'debt').map(x => ({ try: tryOf(x), date: x.date }));
+    const payments = (c.txs || []).filter(x => x.type === 'payment').map(x => ({ try: tryOf(x), date: x.date }));
+    const { today, results } = await fxRunningBalance(principal, payments);
+    if (!results.length) {
+      el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Kur alınamadı.</div>`;
+      foot.textContent = '—';
+      return;
     }
-
-    // Now values
-    const nowUSD = thenUSD * today.tryPerUsd;
-    const nowEUR = thenEUR * today.tryPerEur;
-    const nowGold = hasGold && today.goldGramTRY ? thenGold * today.goldGramTRY : null;
-
-    function delta(then, now) {
-      const pct = ((now - then) / then) * 100;
-      return { diff: now - then, pct };
-    }
-    function dhtml(d) {
-      if (Math.abs(d.pct) < 0.05) return '';
-      const up = d.diff > 0;
-      return `<div class="delta ${up ? 'up' : 'dn'}">${up ? '▲' : '▼'} ${Math.abs(d.pct).toFixed(1)}%</div>`;
-    }
-
-    // Weighted average rates for display
-    const avgUsdRate = thenTotalTRY / thenUSD;
-    const avgEurRate = thenTotalTRY / thenEUR;
-    const avgGoldRate = hasGold ? thenTotalTRY / thenGold : null;
-
-    let html = '';
-    if (hasGold) {
-      const dGold = delta(thenTotalTRY, nowGold);
-      html += `<div class="equiv-line">
-        <div class="equiv-asset"><div class="asset-chip gold">Au</div>Altın</div>
-        <div class="equiv-val">
-          <div class="q">${fmtNum(thenGold, 2)}g</div>
-          <div class="r">${fmtNum(avgGoldRate, 0)} ₺/g${anyApprox ? ' ≈' : ''}</div>
-        </div>
-        <div class="equiv-val">
-          <div class="q">${fmtTL(nowGold)}</div>
-          ${dhtml(dGold)}
-        </div>
-      </div>`;
-    }
-    const dUsd = delta(thenTotalTRY, nowUSD);
-    html += `<div class="equiv-line">
-      <div class="equiv-asset"><div class="asset-chip usd">$</div>Dolar</div>
-      <div class="equiv-val">
-        <div class="q">$${fmtNum(thenUSD, 0)}</div>
-        <div class="r">${fmtNum(avgUsdRate, 2)} ₺/$</div>
-      </div>
-      <div class="equiv-val">
-        <div class="q">${fmtTL(nowUSD)}</div>
-        ${dhtml(dUsd)}
-      </div>
-    </div>`;
-    const dEur = delta(thenTotalTRY, nowEUR);
-    html += `<div class="equiv-line">
-      <div class="equiv-asset"><div class="asset-chip eur">€</div>Euro</div>
-      <div class="equiv-val">
-        <div class="q">€${fmtNum(thenEUR, 0)}</div>
-        <div class="r">${fmtNum(avgEurRate, 2)} ₺/€</div>
-      </div>
-      <div class="equiv-val">
-        <div class="q">${fmtTL(nowEUR)}</div>
-        ${dhtml(dEur)}
-      </div>
-    </div>`;
-
-    el.innerHTML = html;
-
-    let footTxt = `Açık borç: ${fmtTL(thenTotalTRY)} · ${openSlices.length > 1 ? `${openSlices.length} parça, ağırlıklı ortalama` : `ilk borç ${fmtDate(earliestDate)}`} · Bugün ${today.date}`;
-    if (anyApprox) footTxt += ' · altın ≈';
-    foot.textContent = footTxt;
+    el.innerHTML = fxRowsHtml(results, t.balance, 'recv');
+    foot.textContent = `Kalan alacak ${fmtTL(t.balance)} · bugün ${today.date} · tahsilatlar o günkü kurdan düşülür · "+" = döviz/altın verseydiniz fazlası`;
   } catch(e) {
     console.error(e);
     el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
@@ -2590,8 +2670,8 @@ function openTxSheet(mode, existingTx = null) {
     : (isDebt ? 'Borç <em>ver</em>' : 'Ödeme <em>al</em>');
   document.getElementById('txSub').textContent = isDebt ? 'Bu kişiye yeni borç ekle' : 'Bu kişiden tahsil edilen tutar';
 
-  document.getElementById('txAmount').value = existingTx ? existingTx.amount : '';
   document.getElementById('txDate').value = existingTx ? existingTx.date : todayISO();
+  txCurF.set(existingTx ? existingTx.cur : 'TRY', existingTx ? existingTx.amount : '', existingTx ? existingTx.try : null);
   document.getElementById('txDue').value = existingTx && existingTx.dueDate ? existingTx.dueDate : '';
   document.getElementById('txNote').value = existingTx && existingTx.note ? existingTx.note : '';
   document.getElementById('txDueField').style.display = isDebt ? '' : 'none';
@@ -2608,7 +2688,8 @@ function closeTxSheet() { scrimTx.classList.remove('open'); txMode = null; }
 async function updateTxHint() {
   clearTimeout(hintTimer);
   hintTimer = setTimeout(async () => {
-    const amt = parseFloat(document.getElementById('txAmount').value);
+    const cf = txCurF.get();
+    const amt = cf.cur === 'TRY' ? cf.amount : (cf.try || 0);
     const dt = document.getElementById('txDate').value;
     const box = document.getElementById('txHint');
     const body = document.getElementById('txHintBody');
@@ -2657,13 +2738,16 @@ document.getElementById('txSave').addEventListener('click', async () => {
   const c = store.contacts.find(x => x.id === currentContactId);
   if (!c) return;
 
-  const amount = parseFloat(document.getElementById('txAmount').value);
+  const cf = txCurF.get();
+  const amount = cf.amount;
   const date = document.getElementById('txDate').value;
   const dueDate = document.getElementById('txDue').value;
   const note = document.getElementById('txNote').value.trim();
 
   if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
   if (!date) { toast('Tarih gerekli', 'error'); return; }
+  if (cf.cur !== 'TRY' && (cf.try == null || cf.try <= 0)) { toast('TL karşılığını girin', 'error'); return; }
+  const tryVal = cf.cur === 'TRY' ? amount : cf.try;
 
   const isEdit = txMode && txMode.edit;
   const type = isEdit ? txMode.type : txMode;
@@ -2672,8 +2756,8 @@ document.getElementById('txSave').addEventListener('click', async () => {
   // Warn if payment > current balance (but allow)
   if (type === 'payment' && !isEdit) {
     const t = contactTotals(c);
-    if (amount > t.balance + 0.01) {
-      if (!confirm(`Ödeme (${fmtTL(amount)}) kalan bakiyeden (${fmtTL(t.balance)}) fazla. Devam edilsin mi?`)) return;
+    if (tryVal > t.balance + 0.01) {
+      if (!confirm(`Tahsilat (${fmtTL(tryVal)}) kalan bakiyeden (${fmtTL(t.balance)}) fazla. Devam edilsin mi?`)) return;
     }
   }
 
@@ -2686,6 +2770,7 @@ document.getElementById('txSave').addEventListener('click', async () => {
   if (isEdit) {
     const tx = c.txs.find(x => x.id === txMode.edit);
     tx.amount = amount; tx.date = date; tx.note = note;
+    tx.cur = cf.cur; tx.try = tryVal;
     tx.method = m.method; tx.bank = m.bank || '';
     if (type === 'debt') {
       tx.dueDate = dueDate;
@@ -2693,11 +2778,11 @@ document.getElementById('txSave').addEventListener('click', async () => {
     }
     toast('Güncellendi', 'success');
   } else {
-    const tx = { id: uid(), type, amount, date, note, method: m.method, bank: m.bank || '' };
+    const tx = { id: uid(), type, amount, date, note, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' };
     if (type === 'debt') { tx.dueDate = dueDate; tx.snapshot = snapshot; }
     c.txs = c.txs || [];
     c.txs.push(tx);
-    toast(type === 'debt' ? 'Borç kaydedildi' : 'Ödeme kaydedildi', 'success');
+    toast(type === 'debt' ? 'Borç kaydedildi' : 'Tahsilat kaydedildi', 'success');
   }
   persist();
   renderAccount(c);
@@ -2716,7 +2801,7 @@ function deleteTx(txid) {
   const c = store.contacts.find(x => x.id === currentContactId);
   const tx = c && c.txs.find(x => x.id === txid);
   if (!tx) return;
-  if (confirm(`Bu ${tx.type === 'debt' ? 'borç' : 'ödeme'} kaydı silinsin mi? (${fmtTL(tx.amount)})`)) {
+  if (confirm(`Bu ${tx.type === 'debt' ? 'borç' : 'ödeme'} kaydı silinsin mi? (${fmtNative(tx)})`)) {
     c.txs = c.txs.filter(x => x.id !== txid);
     persist();
     renderAccount(c);
@@ -2863,14 +2948,16 @@ function updateDebtHint() {
   const box = document.getElementById('dHint');
   const body = document.getElementById('dHintBody');
   if (dPlan === 'flat') {
-    const total = parseFloat(document.getElementById('dTotal').value);
+    const cf = dCurF ? dCurF.get() : { cur: 'TRY', amount: parseFloat(document.getElementById('dTotal').value) };
+    const total = cf.amount;
     const due = document.getElementById('dDueDate').value;
     if (!total || total <= 0) { box.style.display = 'none'; return; }
+    const foreign = cf.cur !== 'TRY';
     box.style.display = '';
     body.className = 'hint-grid';
     body.innerHTML = `
-      <div class="hint-cell"><div class="sym">TOPLAM</div><div class="val">${fmtTL(total)}</div></div>
-      <div class="hint-cell"><div class="sym">ÖDEME</div><div class="val">tek seferlik</div></div>
+      <div class="hint-cell"><div class="sym">TOPLAM</div><div class="val">${foreign ? fmtNative({ cur: cf.cur, amount: total }) : fmtTL(total)}</div></div>
+      <div class="hint-cell"><div class="sym">${foreign ? 'TL KARŞ.' : 'ÖDEME'}</div><div class="val"${foreign ? '' : ''}>${foreign ? (cf.try ? fmtTL(cf.try) : '—') : 'tek seferlik'}</div></div>
       <div class="hint-cell"><div class="sym">VADE</div><div class="val" style="font-size:12px;">${due ? fmtDateShort(due) : 'vadesiz'}</div></div>`;
     return;
   }
@@ -2895,10 +2982,10 @@ function openDebtForm(id) {
   document.getElementById('dAmount').value = d && d.amount != null ? d.amount : '';
   document.getElementById('dCount').value = d && d.count != null ? d.count : '';
   document.getElementById('dFirstDate').value = d && d.firstDate ? d.firstDate : todayISO();
-  document.getElementById('dTotal').value = d && d.total != null ? d.total : '';
   document.getElementById('dDueDate').value = d && d.dueDate ? d.dueDate : '';
   document.getElementById('dStartDate').value = d ? debtStartDate(d) : todayISO();
   document.getElementById('dNote').value = d && d.note ? d.note : '';
+  dCurF.set(d ? d.cur : 'TRY', d && d.total != null ? d.total : '', d ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
   setDebtPlan(d ? (d.plan || 'installment') : 'installment');
   updateDebtTitleLabel();
@@ -2935,10 +3022,12 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
 
   let fields;
   if (dPlan === 'flat') {
-    const total = parseFloat(document.getElementById('dTotal').value);
+    const cf = dCurF.get();
+    const total = cf.amount;
     const dueDate = document.getElementById('dDueDate').value;
     if (!total || total <= 0) { toast('Geçerli tutar girin', 'error'); return; }
-    fields = { plan: 'flat', total, dueDate };
+    if (cf.cur !== 'TRY' && (cf.try == null || cf.try <= 0)) { toast('TL karşılığını girin', 'error'); return; }
+    fields = { plan: 'flat', total, dueDate, cur: cf.cur, totalTry: cf.cur === 'TRY' ? total : cf.try };
   } else {
     const amount = parseFloat(document.getElementById('dAmount').value);
     const count = parseInt(document.getElementById('dCount').value, 10);
@@ -2964,9 +3053,10 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     if (fields.plan === 'installment') {
       d.plan = 'installment'; d.amount = fields.amount; d.count = fields.count; d.firstDate = fields.firstDate;
       d.paidIdx = planChanged ? [] : (d.paidIdx || []).filter(i => i < fields.count);
-      delete d.total; delete d.dueDate; delete d.payments;
+      delete d.total; delete d.dueDate; delete d.payments; delete d.cur; delete d.totalTry;
     } else {
       d.plan = 'flat'; d.total = fields.total; d.dueDate = fields.dueDate;
+      d.cur = fields.cur; d.totalTry = fields.totalTry;
       if (planChanged || !d.payments) d.payments = [];
       delete d.amount; delete d.count; delete d.firstDate; delete d.paidIdx;
     }
@@ -3015,7 +3105,9 @@ function renderDebtDetail(d) {
   document.getElementById('dDetailRemaining').textContent =
     Number(t.remaining).toLocaleString('tr-TR', {maximumFractionDigits: 0});
 
-  const breakBits = [`<span>${fmtTL(t.total)} toplam</span>`];
+  const breakBits = [isForeign(d)
+    ? `<span>${fmtNative({ cur: d.cur, amount: d.total })} · ${fmtTL(t.total)}</span>`
+    : `<span>${fmtTL(t.total)} toplam</span>`];
   if (t.paid > 0) breakBits.push(`<span class="dn">−${fmtTL(t.paid)} ödendi</span>`);
   const od = debtOverdueAmount(d);
   if (od > 0) breakBits.push(`<span class="up">${fmtTL(od)} gecikmiş</span>`);
@@ -3078,9 +3170,9 @@ function renderDebtPayments(d) {
       <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
       <div class="tx-body">
         <div class="tx-label">Ödeme</div>
-        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
+        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${isForeign(p) ? `<span class="pill">${fmtTL(tryOf(p))}</span>` : ''}${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
       </div>
-      <div class="tx-amt">${fmtTL(p.amount)}</div>
+      <div class="tx-amt">${fmtNative(p)}</div>
     </div>`).join('');
   el.querySelectorAll('.inst').forEach(row => {
     row.addEventListener('click', () => openDebtPay(row.dataset.payid));
@@ -3101,42 +3193,17 @@ async function renderDebtEquiv(d) {
   el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Hesaplanıyor...</div>`;
 
   try {
-    const today = todayRates || await getTodayRates();
-    if (!todayRates) { todayRates = today; renderMarket(today); }
     const startDate = debtStartDate(d);
-    let snap = d.snapshot;
-    if (!snap || !snap.tryPerUsd) snap = await getHistoricalRates(startDate);
-
-    const assets = [];
-    if (snap.goldGramTRY && today.goldGramTRY) {
-      const q = remaining / snap.goldGramTRY;
-      assets.push({ key: 'gold', chip: 'Au', name: 'Altın', q: `${fmtNum(q, 2)}g`,
-        rate: `${fmtNum(snap.goldGramTRY, 0)} ₺/g${snap.goldApprox ? ' ≈' : ''}`, nowTL: q * today.goldGramTRY });
+    const principal = [{ try: debtTotals(d).total, date: startDate }];
+    const payments = debtReductions(d).map(r => ({ try: r.amount, date: r.date }));
+    const { today, results } = await fxRunningBalance(principal, payments);
+    if (!results.length) {
+      el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Kur alınamadı.</div>`;
+      foot.textContent = '—';
+      return;
     }
-    {
-      const q = remaining / snap.tryPerUsd;
-      assets.push({ key: 'usd', chip: '$', name: 'Dolar', q: `$${fmtNum(q, 0)}`,
-        rate: `${fmtNum(snap.tryPerUsd, 2)} ₺/$`, nowTL: q * today.tryPerUsd });
-    }
-    {
-      const q = remaining / snap.tryPerEur;
-      assets.push({ key: 'eur', chip: '€', name: 'Euro', q: `€${fmtNum(q, 0)}`,
-        rate: `${fmtNum(snap.tryPerEur, 2)} ₺/€`, nowTL: q * today.tryPerEur });
-    }
-
-    el.innerHTML = assets.map(a => {
-      const pl = a.nowTL - remaining; // borçlu için "+" = kâr (TL'de borçlanmak avantajlı)
-      const pct = (pl / remaining) * 100;
-      const plHtml = Math.abs(pct) < 0.05 ? '' :
-        `<div class="delta ${pl > 0 ? 'up' : 'dn'}">${pl > 0 ? 'kâr' : 'zarar'} ${pl > 0 ? '+' : '−'}${fmtTL(Math.abs(pl))}</div>`;
-      return `<div class="equiv-line">
-        <div class="equiv-asset"><div class="asset-chip ${a.key}">${a.chip}</div>${a.name}</div>
-        <div class="equiv-val"><div class="q">${a.q}</div><div class="r">${a.rate}</div></div>
-        <div class="equiv-val"><div class="q">${fmtTL(a.nowTL)}</div>${plHtml}</div>
-      </div>`;
-    }).join('');
-
-    foot.textContent = `Kalan ${fmtTL(remaining)} · borç tarihi ${snap.requestedDate || startDate} · bugün ${today.date} · "+" = TL'de borçlanmak kârda`;
+    el.innerHTML = fxRowsHtml(results, remaining, 'debt');
+    foot.textContent = `Kalan ${fmtTL(remaining)} · borç ${fmtDateShort(startDate)} · bugün ${today.date} · ödemeler o günkü kurdan düşülür · "+" = TL'de borçlanmak kârda`;
   } catch(e) {
     console.error(e);
     el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
@@ -3323,8 +3390,8 @@ function openDebtPay(payId) {
   editingPayId = p ? p.id : null;
   document.getElementById('debtPayTitle').innerHTML = p ? 'Ödeme <em>düzenle</em>' : 'Ödeme <em>ekle</em>';
   document.getElementById('debtPayDelete').style.display = p ? '' : 'none';
-  document.getElementById('dpAmount').value = p ? p.amount : '';
   document.getElementById('dpDate').value = p ? p.date : todayISO();
+  dpCurF.set(p ? p.cur : 'TRY', p ? p.amount : '', p ? p.try : null);
   setMethod('dp', p ? p.method : 'nakit', p ? p.bank : '');
   scrimDebtPay.classList.add('open');
   setTimeout(() => document.getElementById('dpAmount').focus(), 250);
@@ -3339,22 +3406,25 @@ scrimDebtPay.addEventListener('click', e => { if (e.target === scrimDebtPay) clo
 document.getElementById('debtPaySave').addEventListener('click', () => {
   const d = store.debts.find(x => x.id === currentDebtId);
   if (!d) return;
-  const amount = parseFloat(document.getElementById('dpAmount').value);
+  const cf = dpCurF.get();
+  const amount = cf.amount;
   const date = document.getElementById('dpDate').value;
   if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
   if (!date) { toast('Tarih gerekli', 'error'); return; }
+  if (cf.cur !== 'TRY' && (cf.try == null || cf.try <= 0)) { toast('TL karşılığını girin', 'error'); return; }
+  const tryVal = cf.cur === 'TRY' ? amount : cf.try;
   const m = getMethod('dp');
   d.payments = d.payments || [];
   if (editingPayId) {
     const p = d.payments.find(x => x.id === editingPayId);
-    if (p) { p.amount = amount; p.date = date; p.method = m.method; p.bank = m.bank || ''; }
+    if (p) { p.amount = amount; p.date = date; p.cur = cf.cur; p.try = tryVal; p.method = m.method; p.bank = m.bank || ''; }
     toast('Ödeme güncellendi', 'success');
   } else {
     const rem = debtTotals(d).remaining;
-    if (amount > rem + 0.01) {
-      if (!confirm(`Ödeme (${fmtTL(amount)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
+    if (tryVal > rem + 0.01) {
+      if (!confirm(`Ödeme (${fmtTL(tryVal)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
     }
-    d.payments.push({ id: uid(), amount, date, method: m.method, bank: m.bank || '' });
+    d.payments.push({ id: uid(), amount, date, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' });
     toast('Ödeme eklendi', 'success');
   }
   persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
@@ -3364,7 +3434,7 @@ document.getElementById('debtPayDelete').addEventListener('click', () => {
   const d = store.debts.find(x => x.id === currentDebtId);
   if (!d || !editingPayId) return;
   const p = (d.payments || []).find(x => x.id === editingPayId);
-  if (p && confirm(`Bu ödeme silinsin mi? (${fmtTL(p.amount)})`)) {
+  if (p && confirm(`Bu ödeme silinsin mi? (${fmtNative(p)})`)) {
     d.payments = d.payments.filter(x => x.id !== editingPayId);
     persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
     toast('Ödeme silindi', 'success');
@@ -3389,6 +3459,9 @@ load();
 loadFaizRates();
 loadBanks();
 ['tx', 'd', 'dp'].forEach(initMethodField);
+txCurF = curField('txCur', 'txAmount', 'txDate', 'txTry', 'txTryField', 'txAmountLabel');
+dpCurF = curField('dpCur', 'dpAmount', 'dpDate', 'dpTry', 'dpTryField', 'dpAmountLabel');
+dCurF = curField('dCur', 'dTotal', 'dStartDate', 'dTotalTry', 'dTryField', 'dTotalLabel');
 refresh();
 setMode('receivables');
 
