@@ -1322,40 +1322,71 @@
 
     <div class="sheet-body" style="padding:0;">
 
-      <!-- Equivalents -->
-      <div class="equiv-section">
-        <div class="equiv-head">
-          <div class="equiv-title">Değer karşılıkları</div>
-          <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
-        </div>
-        <div class="equiv-table">
-          <div class="equiv-colhead">
-            <div>Varlık</div>
-            <div>Verildiğinde</div>
-            <div>Bugün</div>
-          </div>
-          <div id="aEquiv">
-            <div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hesaplanıyor...</div>
-          </div>
-        </div>
-        <div class="equiv-footnote" id="aEquivFoot">—</div>
+      <div class="dtabs">
+        <button type="button" class="dtab active" data-tab="tx">Hareketler</button>
+        <button type="button" class="dtab" data-tab="rates">Kur & Faiz</button>
       </div>
 
-      <!-- Transactions / Hareketler -->
-      <div class="txs-section">
-        <div class="equiv-head">
-          <div class="equiv-title">Hareketler</div>
-          <div class="equiv-title" id="txCount" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
+      <!-- Sekme: Hareketler -->
+      <div class="dpanel" id="aPanelTx">
+        <div class="txs-section">
+          <div class="equiv-head">
+            <div class="equiv-title">Hareketler</div>
+            <div class="equiv-title" id="txCount" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
+          </div>
+          <div class="txs-actions">
+            <button class="action-btn primary" id="addDebtBtn">
+              <span class="sign">+</span> Borç ver
+            </button>
+            <button class="action-btn" id="addPayBtn">
+              <span class="sign">−</span> Ödeme al
+            </button>
+          </div>
+          <div class="tx-list" id="aTxList"></div>
         </div>
-        <div class="txs-actions">
-          <button class="action-btn primary" id="addDebtBtn">
-            <span class="sign">+</span> Borç ver
-          </button>
-          <button class="action-btn" id="addPayBtn">
-            <span class="sign">−</span> Ödeme al
-          </button>
+      </div>
+
+      <!-- Sekme: Kur & Faiz -->
+      <div class="dpanel" id="aPanelRates" style="display:none;">
+
+        <!-- Kur karşılıkları -->
+        <div class="equiv-section">
+          <div class="equiv-head">
+            <div class="equiv-title">Değer karşılıkları</div>
+            <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
+          </div>
+          <div class="equiv-table">
+            <div class="equiv-colhead">
+              <div>Varlık</div>
+              <div>Verildiğinde</div>
+              <div>Bugün</div>
+            </div>
+            <div id="aEquiv">
+              <div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Hesaplanıyor...</div>
+            </div>
+          </div>
+          <div class="equiv-footnote" id="aEquivFoot">—</div>
         </div>
-        <div class="tx-list" id="aTxList"></div>
+
+        <!-- İşlemiş faiz -->
+        <div class="equiv-section">
+          <div class="equiv-head">
+            <div class="equiv-title">İşlemiş faiz · bilgi amaçlı</div>
+            <button class="equiv-refresh" id="aRateEdit">oranları düzenle</button>
+          </div>
+          <div class="equiv-table">
+            <div class="equiv-colhead">
+              <div>Tür</div>
+              <div>Oran</div>
+              <div>İşlemiş faiz</div>
+            </div>
+            <div id="aFaiz">
+              <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">—</div>
+            </div>
+          </div>
+          <div class="equiv-footnote" id="aFaizFoot">—</div>
+        </div>
+
       </div>
 
     </div>
@@ -2129,17 +2160,16 @@ function debtReductions(d) {
   return debtSchedule(d).filter(s => s.paid).map(s => ({ date: s.dueDate, amount: s.amount }));
 }
 // Borç tarihinden bugüne, bakiye azaldıkça dönemsel basit faiz
-function accruedInterest(d, periods) {
-  const start = debtStartDate(d);
+// Olay tabanlı işlemiş faiz: events=[{date, delta}] delta>0 ana para, <0 ödeme
+function accruedInterestEvents(events, periods) {
   const today = todayISO();
-  const total = debtTotals(d).total;
+  if (!periods || !periods.length || !events.length) return { interest: 0, days: 0, rates: [] };
+  let start = events[0].date;
+  events.forEach(e => { if (e.date < start) start = e.date; });
   const totalDays = Math.max(0, dayDiff(start, today));
-  if (!periods || !periods.length || totalDays <= 0 || total <= 0) {
-    return { interest: 0, days: totalDays, rates: [] };
-  }
-  const reductions = debtReductions(d);
+  if (totalDays <= 0) return { interest: 0, days: totalDays, rates: [] };
   const pts = new Set([start, today]);
-  reductions.forEach(r => { if (r.date > start && r.date < today) pts.add(r.date); });
+  events.forEach(e => { if (e.date > start && e.date < today) pts.add(e.date); });
   periods.forEach(p => { if (p.from > start && p.from < today) pts.add(p.from); });
   const sorted = [...pts].sort();
   let interest = 0;
@@ -2148,8 +2178,8 @@ function accruedInterest(d, periods) {
     const d0 = sorted[i], d1 = sorted[i + 1];
     const days = dayDiff(d0, d1);
     if (days <= 0) continue;
-    let bal = total;
-    reductions.forEach(r => { if (r.date <= d0) bal -= r.amount; });
+    let bal = 0;
+    events.forEach(e => { if (e.date <= d0) bal += e.delta; });
     bal = Math.max(0, bal);
     if (bal <= 0) continue;
     used.add(rateAt(periods, d0));
@@ -2157,6 +2187,15 @@ function accruedInterest(d, periods) {
   }
   return { interest, days: totalDays, rates: [...used] };
 }
+function debtInterestEvents(d) {
+  const events = [{ date: debtStartDate(d), delta: debtTotals(d).total }];
+  debtReductions(d).forEach(r => events.push({ date: r.date, delta: -r.amount }));
+  return events;
+}
+function contactInterestEvents(c) {
+  return (c.txs || []).map(t => ({ date: t.date, delta: (t.type === 'debt' ? 1 : -1) * tryOf(t) }));
+}
+function accruedInterest(d, periods) { return accruedInterestEvents(debtInterestEvents(d), periods); }
 
 // ============ RATES ============
 const OZ = 31.1035;
@@ -2454,8 +2493,37 @@ async function openAccount(id) {
   if (!c) return;
 
   renderAccount(c);
+  setAcctTab('tx');
   scrimAccount.classList.add('open');
   renderEquivalents(c);
+  renderContactFaiz(c);
+}
+
+function setAcctTab(tab) {
+  document.querySelectorAll('#scrimAccount .dtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('aPanelTx').style.display = tab === 'tx' ? '' : 'none';
+  document.getElementById('aPanelRates').style.display = tab === 'rates' ? '' : 'none';
+  const body = document.querySelector('#scrimAccount .sheet-body');
+  if (body) body.scrollTop = 0;
+}
+document.querySelectorAll('#scrimAccount .dtab').forEach(b => b.addEventListener('click', () => setAcctTab(b.dataset.tab)));
+document.getElementById('aRateEdit').addEventListener('click', openRates);
+
+function renderContactFaiz(c) {
+  const el = document.getElementById('aFaiz');
+  const foot = document.getElementById('aFaizFoot');
+  const events = contactInterestEvents(c);
+  const balance = contactTotals(c).balance;
+  const yasal = accruedInterestEvents(events, faizRates.yasal);
+  const avans = accruedInterestEvents(events, faizRates.avans);
+  const rateLabel = res => !res.rates.length ? '—' : (res.rates.length === 1 ? '%' + fmtNum(res.rates[0], 2) : 'değişken');
+  const row = (name, res) => `<div class="equiv-line">
+      <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
+      <div class="equiv-val"><div class="q" style="font-size:14px;">${rateLabel(res)}</div><div class="r">yıllık</div></div>
+      <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">alacak+faiz ${fmtTL(balance + res.interest)}</div></div>
+    </div>`;
+  el.innerHTML = row('Yasal faiz', yasal) + row('Avans faizi', avans);
+  foot.innerHTML = `${yasal.days} gün · basit faiz, tahsilat oldukça bakiye düşer · <strong>bilgi amaçlı, resmi değildir</strong>`;
 }
 
 function renderAccount(c) {
@@ -2804,6 +2872,7 @@ document.getElementById('txSave').addEventListener('click', async () => {
   persist();
   renderAccount(c);
   renderEquivalents(c);
+  renderContactFaiz(c);
   refresh();
   closeTxSheet();
 });
@@ -2823,6 +2892,7 @@ function deleteTx(txid) {
     persist();
     renderAccount(c);
     renderEquivalents(c);
+    renderContactFaiz(c);
     refresh();
     toast('Silindi', 'success');
   }
@@ -3350,6 +3420,8 @@ document.getElementById('ratesSave').addEventListener('click', () => {
   closeRates();
   const d = store.debts.find(x => x.id === currentDebtId);
   if (d) renderDebtFaiz(d);
+  const c = store.contacts.find(x => x.id === currentContactId);
+  if (c && scrimAccount.classList.contains('open')) renderContactFaiz(c);
   toast('Oranlar kaydedildi', 'success');
 });
 
