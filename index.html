@@ -1781,10 +1781,22 @@ function debtOverdueAmount(d) {
 }
 
 // ---- Faiz (yasal / avans) — bilgi amaçlı, dönemsel basit faiz ----
-const FAIZ_KEY = 'cari_faiz_oranlari_v1';
+const FAIZ_KEY = 'cari_faiz_oranlari_v2';
 const FAIZ_DEFAULTS = {
-  yasal: [{ from: '2006-01-01', rate: 9 }],
-  avans: [{ from: '2006-01-01', rate: 11 }]
+  // Kanuni (yasal) faiz — 3095 sayılı Kanun m.1
+  yasal: [
+    { from: '2006-01-01', rate: 9 },
+    { from: '2024-06-01', rate: 24 }
+  ],
+  // TCMB avans (ticari temerrüt) faiz oranı
+  avans: [
+    { from: '2023-12-01', rate: 41.75 },
+    { from: '2024-04-01', rate: 51.75 },
+    { from: '2024-12-28', rate: 49.25 },
+    { from: '2025-03-08', rate: 44.25 },
+    { from: '2025-09-17', rate: 42.25 },
+    { from: '2025-12-20', rate: 39.75 }
+  ]
 };
 let faizRates = { yasal: [], avans: [] };
 function loadFaizRates() {
