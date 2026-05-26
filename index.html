@@ -1562,7 +1562,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <div>
-        <div class="sheet-title">Ödeme <em>ekle</em></div>
+        <div class="sheet-title" id="debtPayTitle">Ödeme <em>ekle</em></div>
         <div class="sheet-sub">Bu borca yapılan geri ödeme</div>
       </div>
       <button class="sheet-close" id="debtPayClose" aria-label="Kapat"></button>
@@ -1591,6 +1591,7 @@
       </div>
     </div>
     <div class="sheet-footer">
+      <button class="btn btn-danger" id="debtPayDelete" style="display:none;">Sil</button>
       <button class="btn btn-ghost" id="debtPayCancel">Vazgeç</button>
       <button class="btn btn-primary" id="debtPaySave">Kaydet</button>
     </div>
@@ -3017,20 +3018,12 @@ function renderDebtPayments(d) {
       <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
       <div class="tx-body">
         <div class="tx-label">Ödeme</div>
-        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${methodPill(p)}<span class="pill">silmek için dokun</span></div>
+        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
       </div>
       <div class="tx-amt">${fmtTL(p.amount)}</div>
     </div>`).join('');
   el.querySelectorAll('.inst').forEach(row => {
-    row.addEventListener('click', () => {
-      const pid = row.dataset.payid;
-      const pp = (d.payments || []).find(x => x.id === pid);
-      if (pp && confirm(`Bu ödeme silinsin mi? (${fmtTL(pp.amount)})`)) {
-        d.payments = d.payments.filter(x => x.id !== pid);
-        persist(); renderDebtDetail(d); renderSummary(); renderDebts();
-        toast('Silindi', 'success');
-      }
-    });
+    row.addEventListener('click', () => openDebtPay(row.dataset.payid));
   });
 }
 
@@ -3263,14 +3256,20 @@ document.getElementById('dRefresh').addEventListener('click', async () => {
 // ============ DEBT PAYMENT (tek seferlik borç) ============
 const scrimDebtPay = document.getElementById('scrimDebtPay');
 
-function openDebtPay() {
-  document.getElementById('dpAmount').value = '';
-  document.getElementById('dpDate').value = todayISO();
-  setMethod('dp', 'nakit', '');
+let editingPayId = null;
+function openDebtPay(payId) {
+  const d = store.debts.find(x => x.id === currentDebtId);
+  const p = payId && d ? (d.payments || []).find(x => x.id === payId) : null;
+  editingPayId = p ? p.id : null;
+  document.getElementById('debtPayTitle').innerHTML = p ? 'Ödeme <em>düzenle</em>' : 'Ödeme <em>ekle</em>';
+  document.getElementById('debtPayDelete').style.display = p ? '' : 'none';
+  document.getElementById('dpAmount').value = p ? p.amount : '';
+  document.getElementById('dpDate').value = p ? p.date : todayISO();
+  setMethod('dp', p ? p.method : 'nakit', p ? p.bank : '');
   scrimDebtPay.classList.add('open');
   setTimeout(() => document.getElementById('dpAmount').focus(), 250);
 }
-function closeDebtPay() { scrimDebtPay.classList.remove('open'); }
+function closeDebtPay() { scrimDebtPay.classList.remove('open'); editingPayId = null; }
 
 document.getElementById('dAddPayBtn').addEventListener('click', openDebtPay);
 document.getElementById('debtPayCancel').addEventListener('click', closeDebtPay);
@@ -3284,15 +3283,32 @@ document.getElementById('debtPaySave').addEventListener('click', () => {
   const date = document.getElementById('dpDate').value;
   if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
   if (!date) { toast('Tarih gerekli', 'error'); return; }
-  const rem = debtTotals(d).remaining;
-  if (amount > rem + 0.01) {
-    if (!confirm(`Ödeme (${fmtTL(amount)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
-  }
   const m = getMethod('dp');
   d.payments = d.payments || [];
-  d.payments.push({ id: uid(), amount, date, method: m.method, bank: m.bank || '' });
+  if (editingPayId) {
+    const p = d.payments.find(x => x.id === editingPayId);
+    if (p) { p.amount = amount; p.date = date; p.method = m.method; p.bank = m.bank || ''; }
+    toast('Ödeme güncellendi', 'success');
+  } else {
+    const rem = debtTotals(d).remaining;
+    if (amount > rem + 0.01) {
+      if (!confirm(`Ödeme (${fmtTL(amount)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
+    }
+    d.payments.push({ id: uid(), amount, date, method: m.method, bank: m.bank || '' });
+    toast('Ödeme eklendi', 'success');
+  }
   persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
-  toast('Ödeme eklendi', 'success');
+});
+
+document.getElementById('debtPayDelete').addEventListener('click', () => {
+  const d = store.debts.find(x => x.id === currentDebtId);
+  if (!d || !editingPayId) return;
+  const p = (d.payments || []).find(x => x.id === editingPayId);
+  if (p && confirm(`Bu ödeme silinsin mi? (${fmtTL(p.amount)})`)) {
+    d.payments = d.payments.filter(x => x.id !== editingPayId);
+    persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
+    toast('Ödeme silindi', 'success');
+  }
 });
 
 document.getElementById('dSettleBtn').addEventListener('click', () => {
