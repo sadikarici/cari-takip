@@ -2629,10 +2629,13 @@ async function fxRunningBalance(principal, payments) {
   for (const dt of dates) {
     try { snaps[dt] = await getHistoricalRates(dt); } catch(e) { snaps[dt] = null; }
   }
+  // Referans (verildiği) tarih = en erken ana para tarihi
+  let refDate = principal.length ? principal[0].date : todayISO();
+  principal.forEach(e => { if (e.date < refDate) refDate = e.date; });
   const defs = [
-    { key: 'gold', cur: 'GOLD', name: 'Altın', chip: 'Au', fmt: u => fmtNum(u, 2) + 'g', todayRate: today.goldGramTRY, rateLabel: today.goldGramTRY ? fmtNum(today.goldGramTRY, 0) + ' ₺/g' : '' },
-    { key: 'usd', cur: 'USD', name: 'Dolar', chip: '$', fmt: u => '$' + fmtNum(u, 0), todayRate: today.tryPerUsd, rateLabel: today.tryPerUsd ? fmtNum(today.tryPerUsd, 2) + ' ₺/$' : '' },
-    { key: 'eur', cur: 'EUR', name: 'Euro', chip: '€', fmt: u => '€' + fmtNum(u, 0), todayRate: today.tryPerEur, rateLabel: today.tryPerEur ? fmtNum(today.tryPerEur, 2) + ' ₺/€' : '' }
+    { key: 'gold', cur: 'GOLD', name: 'Altın', chip: 'Au', fmt: u => fmtNum(u, 2) + 'g', todayRate: today.goldGramTRY, rateFmt: r => fmtNum(r, 0) + ' ₺/g' },
+    { key: 'usd', cur: 'USD', name: 'Dolar', chip: '$', fmt: u => '$' + fmtNum(u, 0), todayRate: today.tryPerUsd, rateFmt: r => fmtNum(r, 2) + ' ₺/$' },
+    { key: 'eur', cur: 'EUR', name: 'Euro', chip: '€', fmt: u => '€' + fmtNum(u, 0), todayRate: today.tryPerEur, rateFmt: r => fmtNum(r, 2) + ' ₺/€' }
   ];
   const results = [];
   for (const a of defs) {
@@ -2650,14 +2653,20 @@ async function fxRunningBalance(principal, payments) {
     }
     if (!ok) continue;
     units = Math.max(0, units);
-    results.push({ key: a.key, chip: a.chip, name: a.name, q: a.fmt(units), rateLabel: a.rateLabel, units, nowTL: units * a.todayRate });
+    const thenRate = curRateAt(snaps[refDate], a.cur) || a.todayRate;
+    results.push({
+      key: a.key, chip: a.chip, name: a.name, q: a.fmt(units), units,
+      rateLabel: a.rateFmt(thenRate),       // borcun verildiği tarihteki kur
+      thenTL: units * thenRate,
+      nowTL: units * a.todayRate
+    });
   }
-  return { today, results };
+  return { today, refDate, results };
 }
-function fxRowsHtml(results, remainingTL, kind) {
+function fxRowsHtml(results, kind) {
   return results.map(a => {
-    const pl = a.nowTL - remainingTL;
-    const pct = remainingTL > 0 ? (pl / remainingTL) * 100 : 0;
+    const pl = a.nowTL - a.thenTL;           // kur kazancı/kaybı
+    const pct = a.thenTL > 0 ? (pl / a.thenTL) * 100 : 0;
     let plHtml = '';
     if (Math.abs(pct) >= 0.05) {
       const up = pl > 0;
@@ -2694,7 +2703,7 @@ async function renderEquivalents(c) {
       foot.textContent = '—';
       return;
     }
-    el.innerHTML = fxRowsHtml(results, t.balance, 'recv');
+    el.innerHTML = fxRowsHtml(results, 'recv');
     // Döviz cinsinden alacaksa: kalan tutarı bugünkü kurdan göster
     const nc = contactNativeCur(c);
     const nr = nc ? results.find(x => x.key === curKey(nc)) : null;
@@ -3292,7 +3301,7 @@ async function renderDebtEquiv(d) {
       foot.textContent = '—';
       return;
     }
-    el.innerHTML = fxRowsHtml(results, remaining, 'debt');
+    el.innerHTML = fxRowsHtml(results, 'debt');
     // Döviz cinsinden borçsa: kalan borcu bugünkü kurdan göster
     const nr = isForeign(d) ? results.find(x => x.key === curKey(d.cur)) : null;
     if (nr) {
