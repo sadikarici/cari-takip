@@ -1856,6 +1856,14 @@ function fmtNative(e) {
 }
 // Yabancı para kaydı mı? (gösterimde TL karşılığını da yazmak için)
 function isForeign(e) { return e && e.cur && e.cur !== 'TRY'; }
+// Para birimi -> FX varlık anahtarı
+function curKey(cur) { return cur === 'USD' ? 'usd' : cur === 'EUR' ? 'eur' : cur === 'GOLD' ? 'gold' : null; }
+// Bir carinin tek ve yabancı para birimi varsa onu döndürür (borç hareketlerine göre)
+function contactNativeCur(c) {
+  const curs = new Set((c.txs || []).filter(t => t.type === 'debt').map(t => t.cur || 'TRY'));
+  if (curs.size === 1) { const only = [...curs][0]; return only !== 'TRY' ? only : null; }
+  return null;
+}
 
 function contactTotals(c) {
   let debt = 0, paid = 0;
@@ -2615,7 +2623,16 @@ async function renderEquivalents(c) {
       return;
     }
     el.innerHTML = fxRowsHtml(results, t.balance, 'recv');
-    foot.textContent = `Kalan alacak ${fmtTL(t.balance)} · bugün ${today.date} · tahsilatlar o günkü kurdan düşülür · "+" = döviz/altın verseydiniz fazlası`;
+    // Döviz cinsinden alacaksa: kalan tutarı bugünkü kurdan göster
+    const nc = contactNativeCur(c);
+    const nr = nc ? results.find(x => x.key === curKey(nc)) : null;
+    if (nr) {
+      document.getElementById('aBalance').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+      document.getElementById('aBreak').innerHTML = `<span>${nr.q} kalan</span><br><span style="color:var(--muted);">bugünkü kurdan</span>`;
+      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · tahsilatlar o günkü kurdan düşülür`;
+    } else {
+      foot.textContent = `Kalan alacak ${fmtTL(t.balance)} · bugün ${today.date} · tahsilatlar o günkü kurdan düşülür · "+" = döviz/altın verseydiniz fazlası`;
+    }
   } catch(e) {
     console.error(e);
     el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
@@ -3203,7 +3220,14 @@ async function renderDebtEquiv(d) {
       return;
     }
     el.innerHTML = fxRowsHtml(results, remaining, 'debt');
-    foot.textContent = `Kalan ${fmtTL(remaining)} · borç ${fmtDateShort(startDate)} · bugün ${today.date} · ödemeler o günkü kurdan düşülür · "+" = TL'de borçlanmak kârda`;
+    // Döviz cinsinden borçsa: kalan borcu bugünkü kurdan göster
+    const nr = isForeign(d) ? results.find(x => x.key === curKey(d.cur)) : null;
+    if (nr) {
+      document.getElementById('dDetailRemaining').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · borç ${fmtDateShort(startDate)} · ödemeler o günkü kurdan düşülür`;
+    } else {
+      foot.textContent = `Kalan ${fmtTL(remaining)} · borç ${fmtDateShort(startDate)} · bugün ${today.date} · ödemeler o günkü kurdan düşülür · "+" = TL'de borçlanmak kârda`;
+    }
   } catch(e) {
     console.error(e);
     el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
