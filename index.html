@@ -412,7 +412,8 @@
     background: var(--paper);
     width: 100%;
     max-width: 640px;
-    max-height: 94vh;
+    max-height: 90vh;
+    max-height: 90dvh;
     display: flex;
     flex-direction: column;
     border-radius: 14px 14px 0 0;
@@ -631,6 +632,18 @@
     letter-spacing: 0.02em;
   }
   .account-contact a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--faint); }
+  .io-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    font-size: 11px;
+    line-height: 1;
+    vertical-align: -3px;
+    margin-right: 3px;
+  }
+  .io-badge.in { background: var(--forest); color: var(--paper); }
 
   .balance-row {
     display: grid;
@@ -2970,7 +2983,8 @@ function renderDebtDetail(d) {
   const payActions = document.getElementById('dPayActions');
   const foot = document.getElementById('dDetailFoot');
   const mt = methodText(d);
-  document.getElementById('dDetailCat').textContent = 'alındı ' + fmtDateShort(debtStartDate(d)) + (mt ? ' · ' + mt : '');
+  document.getElementById('dDetailCat').innerHTML =
+    `<span class="io-badge in" title="Borç alındı">↓</span>` + fmtDateShort(debtStartDate(d)) + (mt ? ' · ' + escapeHtml(mt) : '');
   if (d.plan === 'flat') {
     planTitle.textContent = 'Ödemeler';
     payActions.style.display = '';
