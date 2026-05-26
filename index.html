@@ -898,6 +898,14 @@
   .tx-amt.debt::before { content: '+'; color: var(--red); margin-right: 2px; }
   .tx-amt.payment { color: var(--forest); }
   .tx-amt.payment::before { content: '−'; margin-right: 2px; }
+  .tx-amt-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+    margin-top: 2px;
+  }
 
   .tx-actions {
     display: none;
@@ -1895,6 +1903,23 @@ function contactNativeCur(c) {
   if (curs.size === 1) { const only = [...curs][0]; return only !== 'TRY' ? only : null; }
   return null;
 }
+// TL bir hareketin, yabancı para cinsli hesapta o tarihteki döviz karşılığı (altına yazılır)
+function natEqSub(entry, nc) {
+  if (!nc || isForeign(entry)) return '';
+  return `<div class="tx-amt-sub nat-eq" data-d="${entry.date}" data-tl="${tryOf(entry)}">≈ …</div>`;
+}
+function fillNativeEquiv(scopeEl, nc) {
+  if (!nc) return;
+  scopeEl.querySelectorAll('.nat-eq').forEach(async span => {
+    try {
+      const r = await getHistoricalRates(span.dataset.d);
+      const rate = curRateAt(r, nc);
+      if (!rate) { span.remove(); return; }
+      const v = Number(span.dataset.tl) / rate;
+      span.textContent = '≈ ' + (nc === 'GOLD' ? fmtNum(v, 2) + ' g' : CUR_SYM[nc] + fmtNum(v, v % 1 ? 2 : 0));
+    } catch(e) { span.remove(); }
+  });
+}
 
 function contactTotals(c) {
   let debt = 0, paid = 0;
@@ -2568,6 +2593,7 @@ function renderTxList(c) {
     return;
   }
 
+  const nc = contactNativeCur(c);
   el.innerHTML = txs.map(tx => {
     const isDebt = tx.type === 'debt';
     const pills = [];
@@ -2590,13 +2616,15 @@ function renderTxList(c) {
           ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(tryOf(tx) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(tryOf(tx) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(tryOf(tx) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
         </div>
       </div>
-      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtNative(tx)}</div>
+      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtNative(tx)}${natEqSub(tx, nc)}</div>
     </div>
     <div class="tx-actions">
       <button class="btn btn-ghost btn-sm" data-act="edit" data-txid="${tx.id}">Düzenle</button>
       <button class="btn btn-danger btn-sm" data-act="delete" data-txid="${tx.id}">Sil</button>
     </div>`;
   }).join('');
+
+  fillNativeEquiv(el, nc);
 
   // Expand on click
   el.querySelectorAll('.tx').forEach(row => {
@@ -3264,6 +3292,7 @@ function renderDebtPayments(d) {
     el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Henüz ödeme yok. Üstteki butonla geri ödeme ekleyin.</div>`;
     return;
   }
+  const nc = isForeign(d) ? d.cur : null;
   el.innerHTML = pays.map(p => `
     <div class="inst" data-payid="${p.id}">
       <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
@@ -3271,8 +3300,9 @@ function renderDebtPayments(d) {
         <div class="tx-label">Ödeme</div>
         <div class="tx-meta"><span>${fmtDate(p.date)}</span>${isForeign(p) ? `<span class="pill">${fmtTL(tryOf(p))}</span>` : ''}${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
       </div>
-      <div class="tx-amt">${fmtNative(p)}</div>
+      <div class="tx-amt">${fmtNative(p)}${natEqSub(p, nc)}</div>
     </div>`).join('');
+  fillNativeEquiv(el, nc);
   el.querySelectorAll('.inst').forEach(row => {
     row.addEventListener('click', () => openDebtPay(row.dataset.payid));
   });
