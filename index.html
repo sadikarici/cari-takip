@@ -1903,10 +1903,13 @@ function contactNativeCur(c) {
   if (curs.size === 1) { const only = [...curs][0]; return only !== 'TRY' ? only : null; }
   return null;
 }
-// TL bir hareketin, yabancı para cinsli hesapta o tarihteki döviz karşılığı (altına yazılır)
-function natEqSub(entry, nc) {
-  if (!nc || isForeign(entry)) return '';
-  return `<div class="tx-amt-sub nat-eq" data-d="${entry.date}" data-tl="${tryOf(entry)}">≈ …</div>`;
+// Tutarın altına yazılan ikincil karşılık:
+//  - Yabancı para hareket → o tarihteki TL karşılığı (kayıtlı)
+//  - Döviz hesapta TL hareket → o tarihteki döviz karşılığı (kurdan, ≈)
+function amtSub(entry, nc) {
+  if (isForeign(entry)) return `<div class="tx-amt-sub">${fmtTL(tryOf(entry))}</div>`;
+  if (nc) return `<div class="tx-amt-sub nat-eq" data-d="${entry.date}" data-tl="${tryOf(entry)}">≈ …</div>`;
+  return '';
 }
 function fillNativeEquiv(scopeEl, nc) {
   if (!nc) return;
@@ -2610,13 +2613,12 @@ function renderTxList(c) {
         <div class="tx-label">${isDebt ? 'Borç verildi' : 'Ödeme alındı'}${tx.note ? ' · ' + escapeHtml(tx.note) : ''}</div>
         <div class="tx-meta">
           <span>${fmtDate(tx.date)}</span>
-          ${isForeign(tx) ? `<span class="pill">${fmtTL(tryOf(tx))}</span>` : ''}
           ${methodPill(tx)}
           ${pills.join('')}
           ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(tryOf(tx) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(tryOf(tx) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(tryOf(tx) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
         </div>
       </div>
-      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtNative(tx)}${natEqSub(tx, nc)}</div>
+      <div class="tx-amt ${isDebt ? 'debt' : 'payment'}">${fmtNative(tx)}${amtSub(tx, nc)}</div>
     </div>
     <div class="tx-actions">
       <button class="btn btn-ghost btn-sm" data-act="edit" data-txid="${tx.id}">Düzenle</button>
@@ -3298,9 +3300,9 @@ function renderDebtPayments(d) {
       <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
       <div class="tx-body">
         <div class="tx-label">Ödeme</div>
-        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${isForeign(p) ? `<span class="pill">${fmtTL(tryOf(p))}</span>` : ''}${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
+        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${methodPill(p)}<span class="pill">düzenlemek için dokun</span></div>
       </div>
-      <div class="tx-amt">${fmtNative(p)}${natEqSub(p, nc)}</div>
+      <div class="tx-amt">${fmtNative(p)}${amtSub(p, nc)}</div>
     </div>`).join('');
   fillNativeEquiv(el, nc);
   el.querySelectorAll('.inst').forEach(row => {
