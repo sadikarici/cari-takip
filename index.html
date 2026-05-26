@@ -2523,7 +2523,7 @@ function renderContactFaiz(c) {
   const avans = accruedInterestEvents(events, faizRates.avans);
   const row = (name, res, periods) => `<div class="equiv-line">
       <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
-      <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık${res.rates.length > 1 ? ' · değişti' : ''}</div></div>
+      <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık</div></div>
       <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">alacak+faiz ${fmtTL(balance + res.interest)}</div></div>
     </div>`;
   el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal) + row('Avans faizi', avans, faizRates.avans);
@@ -3241,7 +3241,7 @@ function renderDebtFaiz(d) {
   const avans = accruedInterest(d, faizRates.avans);
   const row = (name, res, periods) => `<div class="equiv-line">
       <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
-      <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık${res.rates.length > 1 ? ' · değişti' : ''}</div></div>
+      <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık</div></div>
       <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">borç+faiz ${fmtTL(total + res.interest)}</div></div>
     </div>`;
   el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal) + row('Avans faizi', avans, faizRates.avans);
