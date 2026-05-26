@@ -1107,6 +1107,17 @@
     height: 36px;
   }
   .rr-del:active { background: var(--red-bg); }
+
+  /* Banka listesi satırı */
+  .bank-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--hair);
+    font-size: 14px;
+  }
+  .bank-row:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -1344,6 +1355,17 @@
         <label class="field-label">Açıklama (opsiyonel)</label>
         <input type="text" class="field-input" id="txNote" placeholder="Ne için verildi / ödendi" autocomplete="off">
       </div>
+      <div class="field">
+        <label class="field-label">Nakit / Banka</label>
+        <div class="seg" id="txMethodSeg">
+          <button type="button" class="seg-btn active" data-method="nakit">Nakit</button>
+          <button type="button" class="seg-btn" data-method="banka">Banka</button>
+        </div>
+      </div>
+      <div class="field" id="txBankField" style="display:none;">
+        <label class="field-label">Banka</label>
+        <select class="field-input" id="txBank"></select>
+      </div>
 
       <div class="hint-box" id="txHint" style="display:none;">
         <div class="hint-label">Bu tarihteki karşılığı</div>
@@ -1423,6 +1445,17 @@
       <div class="field">
         <label class="field-label">Açıklama (opsiyonel)</label>
         <input type="text" class="field-input" id="dNote" placeholder="Detay" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label">Borç nasıl alındı?</label>
+        <div class="seg" id="dMethodSeg">
+          <button type="button" class="seg-btn active" data-method="nakit">Nakit</button>
+          <button type="button" class="seg-btn" data-method="banka">Banka</button>
+        </div>
+      </div>
+      <div class="field" id="dBankField" style="display:none;">
+        <label class="field-label">Banka</label>
+        <select class="field-input" id="dBank"></select>
       </div>
       <div class="hint-box" id="dHint" style="display:none;">
         <div class="hint-label">Özet</div>
@@ -1543,6 +1576,17 @@
           <input type="date" class="field-input" id="dpDate">
         </div>
       </div>
+      <div class="field">
+        <label class="field-label">Nakit / Banka</label>
+        <div class="seg" id="dpMethodSeg">
+          <button type="button" class="seg-btn active" data-method="nakit">Nakit</button>
+          <button type="button" class="seg-btn" data-method="banka">Banka</button>
+        </div>
+      </div>
+      <div class="field" id="dpBankField" style="display:none;">
+        <label class="field-label">Banka</label>
+        <select class="field-input" id="dpBank"></select>
+      </div>
     </div>
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="debtPayCancel">Vazgeç</button>
@@ -1576,6 +1620,33 @@
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="ratesCancel">Vazgeç</button>
       <button class="btn btn-primary" id="ratesSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANKALAR SHEET ============ -->
+<div class="scrim" id="scrimBanks">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Bankalar</div>
+        <div class="sheet-sub">Seçilebilecek banka listesi</div>
+      </div>
+      <button class="sheet-close" id="banksClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row" style="align-items:flex-end;">
+        <div class="field" style="flex:1;">
+          <label class="field-label">Yeni banka</label>
+          <input type="text" class="field-input" id="newBankName" placeholder="Banka adı" autocomplete="off">
+        </div>
+        <button type="button" class="btn btn-primary" id="addBankBtn" style="white-space:nowrap;">Ekle</button>
+      </div>
+      <div id="bankList" style="margin-top:14px;"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-primary" id="banksDone">Tamam</button>
     </div>
   </div>
 </div>
@@ -1810,6 +1881,54 @@ function loadFaizRates() {
   };
 }
 function persistFaizRates() { localStorage.setItem(FAIZ_KEY, JSON.stringify(faizRates)); }
+
+// ---- Bankalar + ödeme yöntemi (nakit / banka) ----
+const BANKS_KEY = 'cari_bankalar_v1';
+const BANKS_DEFAULT = [
+  'Ziraat Bankası', 'İş Bankası', 'Garanti BBVA', 'Akbank', 'Yapı Kredi',
+  'Halkbank', 'VakıfBank', 'QNB', 'DenizBank', 'TEB', 'ING', 'Enpara',
+  'Şekerbank', 'HSBC', 'Fibabanka', 'Kuveyt Türk', 'Albaraka Türk',
+  'Türkiye Finans', 'Papara'
+];
+let banks = [];
+function loadBanks() {
+  try { const a = JSON.parse(localStorage.getItem(BANKS_KEY)); if (Array.isArray(a)) { banks = a; return; } } catch(e){}
+  banks = [...BANKS_DEFAULT];
+}
+function persistBanks() { localStorage.setItem(BANKS_KEY, JSON.stringify(banks)); }
+
+function buildBankOptions(selected) {
+  let html = banks.map(b => `<option value="${escapeHtml(b)}"${b === selected ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
+  if (selected && !banks.includes(selected)) html = `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>` + html;
+  html += `<option value="__manage__">＋ Banka ekle / düzenle…</option>`;
+  return html;
+}
+// Bir formun yöntem alanını (prefix) verilen değerlerle doldurur
+function setMethod(prefix, method, bank) {
+  method = method === 'banka' ? 'banka' : 'nakit';
+  document.querySelectorAll('#' + prefix + 'MethodSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+  document.getElementById(prefix + 'Bank').innerHTML = buildBankOptions(bank || '');
+  document.getElementById(prefix + 'BankField').style.display = method === 'banka' ? '' : 'none';
+}
+// Formdan {method, bank?} okur
+function getMethod(prefix) {
+  const active = document.querySelector('#' + prefix + 'MethodSeg .seg-btn.active');
+  const method = active && active.dataset.method === 'banka' ? 'banka' : 'nakit';
+  if (method !== 'banka') return { method: 'nakit' };
+  const v = document.getElementById(prefix + 'Bank').value;
+  return { method: 'banka', bank: (v && v !== '__manage__') ? v : '' };
+}
+function initMethodField(prefix) {
+  document.querySelectorAll('#' + prefix + 'MethodSeg .seg-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#' + prefix + 'MethodSeg .seg-btn').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById(prefix + 'BankField').style.display = b.dataset.method === 'banka' ? '' : 'none';
+  }));
+  const sel = document.getElementById(prefix + 'Bank');
+  sel.addEventListener('change', () => { if (sel.value === '__manage__') openBanks(); });
+}
+// Görünüm yardımcıları
+function methodText(o) { if (!o || !o.method) return ''; return o.method === 'banka' ? (o.bank || 'Banka') : 'Nakit'; }
+function methodPill(o) { const t = methodText(o); return t ? `<span class="pill">${escapeHtml(t)}</span>` : ''; }
 
 function dayDiff(a, b) {
   return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
@@ -2208,6 +2327,7 @@ function renderTxList(c) {
         <div class="tx-label">${isDebt ? 'Borç verildi' : 'Ödeme alındı'}${tx.note ? ' · ' + escapeHtml(tx.note) : ''}</div>
         <div class="tx-meta">
           <span>${fmtDate(tx.date)}</span>
+          ${methodPill(tx)}
           ${pills.join('')}
           ${tx.snapshot && tx.snapshot.tryPerUsd ? `<span class="pill">$${fmtNum(Number(tx.amount) / tx.snapshot.tryPerUsd, 0)} · €${fmtNum(Number(tx.amount) / tx.snapshot.tryPerEur, 0)}${tx.snapshot.goldGramTRY ? ' · ' + fmtNum(Number(tx.amount) / tx.snapshot.goldGramTRY, 2) + 'g' : ''}</span>` : ''}
         </div>
@@ -2421,6 +2541,7 @@ function openTxSheet(mode, existingTx = null) {
   document.getElementById('txDue').value = existingTx && existingTx.dueDate ? existingTx.dueDate : '';
   document.getElementById('txNote').value = existingTx && existingTx.note ? existingTx.note : '';
   document.getElementById('txDueField').style.display = isDebt ? '' : 'none';
+  setMethod('tx', existingTx ? existingTx.method : 'nakit', existingTx ? existingTx.bank : '');
   document.getElementById('txHint').style.display = 'none';
 
   scrimTx.classList.add('open');
@@ -2492,6 +2613,7 @@ document.getElementById('txSave').addEventListener('click', async () => {
 
   const isEdit = txMode && txMode.edit;
   const type = isEdit ? txMode.type : txMode;
+  const m = getMethod('tx');
 
   // Warn if payment > current balance (but allow)
   if (type === 'payment' && !isEdit) {
@@ -2510,13 +2632,14 @@ document.getElementById('txSave').addEventListener('click', async () => {
   if (isEdit) {
     const tx = c.txs.find(x => x.id === txMode.edit);
     tx.amount = amount; tx.date = date; tx.note = note;
+    tx.method = m.method; tx.bank = m.bank || '';
     if (type === 'debt') {
       tx.dueDate = dueDate;
       if (snapshot && (!tx.snapshot || tx.snapshot.requestedDate !== date)) tx.snapshot = snapshot;
     }
     toast('Güncellendi', 'success');
   } else {
-    const tx = { id: uid(), type, amount, date, note };
+    const tx = { id: uid(), type, amount, date, note, method: m.method, bank: m.bank || '' };
     if (type === 'debt') { tx.dueDate = dueDate; tx.snapshot = snapshot; }
     c.txs = c.txs || [];
     c.txs.push(tx);
@@ -2722,6 +2845,7 @@ function openDebtForm(id) {
   document.getElementById('dDueDate').value = d && d.dueDate ? d.dueDate : '';
   document.getElementById('dStartDate').value = d ? debtStartDate(d) : todayISO();
   document.getElementById('dNote').value = d && d.note ? d.note : '';
+  setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
   setDebtPlan(d ? (d.plan || 'installment') : 'installment');
   updateDebtTitleLabel();
   updateDebtHint();
@@ -2775,10 +2899,13 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
   let snapshot = null;
   try { snapshot = await getHistoricalRates(startDate); } catch(e) {}
 
+  const m = getMethod('d');
+
   if (editingDebtId) {
     const d = store.debts.find(x => x.id === editingDebtId);
     const planChanged = d.plan !== fields.plan;
     d.category = category; d.title = title; d.note = note; d.startDate = startDate;
+    d.method = m.method; d.bank = m.bank || '';
     if (snapshot && (!d.snapshot || d.snapshot.requestedDate !== startDate)) d.snapshot = snapshot;
     if (fields.plan === 'installment') {
       d.plan = 'installment'; d.amount = fields.amount; d.count = fields.count; d.firstDate = fields.firstDate;
@@ -2791,7 +2918,7 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     }
     toast('Güncellendi', 'success');
   } else {
-    const base = { id: uid(), category, title, note, startDate, snapshot, createdAt: Date.now() };
+    const base = { id: uid(), category, title, note, startDate, snapshot, method: m.method, bank: m.bank || '', createdAt: Date.now() };
     if (fields.plan === 'installment') Object.assign(base, fields, { paidIdx: [] });
     else Object.assign(base, fields, { payments: [] });
     store.debts.push(base);
@@ -2837,7 +2964,8 @@ function renderDebtDetail(d) {
   const planTitle = document.getElementById('dPlanTitle');
   const payActions = document.getElementById('dPayActions');
   const foot = document.getElementById('dDetailFoot');
-  const takenOn = ' · alındı ' + fmtDateShort(debtStartDate(d));
+  const mt = methodText(d);
+  const takenOn = ' · alındı ' + fmtDateShort(debtStartDate(d)) + (mt ? ' · ' + mt : '');
   if (d.plan === 'flat') {
     document.getElementById('dDetailCat').textContent = cat.label + ' · tek seferlik' + takenOn;
     planTitle.textContent = 'Ödemeler';
@@ -2887,7 +3015,7 @@ function renderDebtPayments(d) {
       <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
       <div class="tx-body">
         <div class="tx-label">Ödeme</div>
-        <div class="tx-meta"><span>${fmtDate(p.date)}</span><span class="pill">silmek için dokun</span></div>
+        <div class="tx-meta"><span>${fmtDate(p.date)}</span>${methodPill(p)}<span class="pill">silmek için dokun</span></div>
       </div>
       <div class="tx-amt">${fmtTL(p.amount)}</div>
     </div>`).join('');
@@ -3079,6 +3207,44 @@ document.getElementById('ratesSave').addEventListener('click', () => {
   toast('Oranlar kaydedildi', 'success');
 });
 
+// ============ BANKALAR EDİTÖRÜ ============
+const scrimBanks = document.getElementById('scrimBanks');
+
+function renderBankList() {
+  const host = document.getElementById('bankList');
+  host.innerHTML = banks.length
+    ? banks.map((b, i) => `<div class="bank-row"><span>${escapeHtml(b)}</span><button type="button" class="rr-del" data-idx="${i}" style="width:32px;">×</button></div>`).join('')
+    : `<div style="font-size:11px;color:var(--faint);font-family:'IBM Plex Mono',monospace;">Banka yok. Yukarıdan ekleyin.</div>`;
+  host.querySelectorAll('.rr-del').forEach(btn => btn.addEventListener('click', () => {
+    banks.splice(parseInt(btn.dataset.idx, 10), 1);
+    persistBanks();
+    renderBankList();
+  }));
+}
+function addBank() {
+  const inp = document.getElementById('newBankName');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (!banks.some(b => b.toLowerCase() === name.toLowerCase())) { banks.push(name); persistBanks(); }
+  inp.value = '';
+  renderBankList();
+  inp.focus();
+}
+function openBanks() { renderBankList(); scrimBanks.classList.add('open'); }
+function closeBanks() {
+  scrimBanks.classList.remove('open');
+  // Açık formlardaki banka listelerini güncelle (seçimi koru)
+  ['tx', 'd', 'dp'].forEach(p => {
+    const s = document.getElementById(p + 'Bank');
+    if (s) s.innerHTML = buildBankOptions(s.value === '__manage__' ? '' : s.value);
+  });
+}
+document.getElementById('addBankBtn').addEventListener('click', addBank);
+document.getElementById('newBankName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addBank(); } });
+document.getElementById('banksClose').addEventListener('click', closeBanks);
+document.getElementById('banksDone').addEventListener('click', closeBanks);
+scrimBanks.addEventListener('click', e => { if (e.target === scrimBanks) closeBanks(); });
+
 document.getElementById('dRefresh').addEventListener('click', async () => {
   localStorage.removeItem(RATES_KEY);
   todayRates = null;
@@ -3098,6 +3264,7 @@ const scrimDebtPay = document.getElementById('scrimDebtPay');
 function openDebtPay() {
   document.getElementById('dpAmount').value = '';
   document.getElementById('dpDate').value = todayISO();
+  setMethod('dp', 'nakit', '');
   scrimDebtPay.classList.add('open');
   setTimeout(() => document.getElementById('dpAmount').focus(), 250);
 }
@@ -3119,8 +3286,9 @@ document.getElementById('debtPaySave').addEventListener('click', () => {
   if (amount > rem + 0.01) {
     if (!confirm(`Ödeme (${fmtTL(amount)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
   }
+  const m = getMethod('dp');
   d.payments = d.payments || [];
-  d.payments.push({ id: uid(), amount, date });
+  d.payments.push({ id: uid(), amount, date, method: m.method, bank: m.bank || '' });
   persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
   toast('Ödeme eklendi', 'success');
 });
@@ -3141,6 +3309,8 @@ document.getElementById('dSettleBtn').addEventListener('click', () => {
 // ============ INIT ============
 load();
 loadFaizRates();
+loadBanks();
+['tx', 'd', 'dp'].forEach(initMethodField);
 refresh();
 setMode('receivables');
 
