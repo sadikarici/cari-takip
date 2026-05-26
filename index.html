@@ -1086,6 +1086,27 @@
   }
   .seg-btn:last-child { border-right: none; }
   .seg-btn.active { background: var(--ink); color: var(--paper); }
+
+  /* Faiz oranı dönem satırı */
+  .rate-row {
+    display: grid;
+    grid-template-columns: 1fr 96px 32px;
+    gap: 6px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .rate-row .field-input { padding: 8px 10px; font-size: 13px; }
+  .rr-del {
+    background: transparent;
+    border: 1px solid var(--hair-2);
+    border-radius: var(--r-sm);
+    color: var(--red);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    height: 36px;
+  }
+  .rr-del:active { background: var(--red-bg); }
 </style>
 </head>
 <body>
@@ -1459,6 +1480,25 @@
         <div class="equiv-footnote" id="dEquivFoot">—</div>
       </div>
 
+      <!-- İşlemiş faiz (yasal / avans) -->
+      <div class="equiv-section">
+        <div class="equiv-head">
+          <div class="equiv-title">İşlemiş faiz · bilgi amaçlı</div>
+          <button class="equiv-refresh" id="dRateEdit">oranları düzenle</button>
+        </div>
+        <div class="equiv-table">
+          <div class="equiv-colhead">
+            <div>Tür</div>
+            <div>Oran</div>
+            <div>İşlemiş faiz</div>
+          </div>
+          <div id="dFaiz">
+            <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">—</div>
+          </div>
+        </div>
+        <div class="equiv-footnote" id="dFaizFoot">—</div>
+      </div>
+
       <!-- Taksit planı / ödemeler -->
       <div class="txs-section">
         <div class="equiv-head">
@@ -1511,6 +1551,35 @@
   </div>
 </div>
 
+<!-- ============ FAİZ ORANLARI SHEET ============ -->
+<div class="scrim" id="scrimRates">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Faiz <em>oranları</em></div>
+        <div class="sheet-sub">Yıllık % · dönem başlangıç tarihiyle</div>
+      </div>
+      <button class="sheet-close" id="ratesClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div style="background:var(--ochre-bg);border:1px solid var(--hair-2);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--ink-2);margin-bottom:14px;">
+        Oranlar bilgilendirme amaçlıdır. Resmi/güncel yasal ve avans faiz oranlarını teyit edip buraya girin. Her dönem, başlangıç tarihinden sonraki döneme kadar geçerlidir.
+      </div>
+      <div class="field-label">Yasal faiz dönemleri</div>
+      <div id="yasalPeriods"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="addYasal" style="margin-top:6px;">+ dönem ekle</button>
+      <div class="field-label" style="margin-top:18px;">Avans faizi dönemleri</div>
+      <div id="avansPeriods"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="addAvans" style="margin-top:6px;">+ dönem ekle</button>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="ratesCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="ratesSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1535,6 +1604,7 @@ let filter = 'active';
 let mode = 'receivables'; // 'receivables' | 'debts'
 let debtFilter = 'active';
 let dPlan = 'installment'; // borç formu: 'installment' | 'flat'
+let editingRates = { yasal: [], avans: [] };
 let editingContactId = null;
 let currentContactId = null;
 let editingDebtId = null;
@@ -1708,6 +1778,68 @@ function debtOverdueAmount(d) {
   let sum = 0;
   debtSchedule(d).forEach(s => { if (!s.paid && daysUntil(s.dueDate) < 0) sum += s.amount; });
   return sum;
+}
+
+// ---- Faiz (yasal / avans) — bilgi amaçlı, dönemsel basit faiz ----
+const FAIZ_KEY = 'cari_faiz_oranlari_v1';
+const FAIZ_DEFAULTS = {
+  yasal: [{ from: '2006-01-01', rate: 9 }],
+  avans: [{ from: '2006-01-01', rate: 11 }]
+};
+let faizRates = { yasal: [], avans: [] };
+function loadFaizRates() {
+  try {
+    const o = JSON.parse(localStorage.getItem(FAIZ_KEY));
+    if (o && Array.isArray(o.yasal) && Array.isArray(o.avans)) { faizRates = o; return; }
+  } catch(e){}
+  faizRates = {
+    yasal: FAIZ_DEFAULTS.yasal.map(p => ({...p})),
+    avans: FAIZ_DEFAULTS.avans.map(p => ({...p}))
+  };
+}
+function persistFaizRates() { localStorage.setItem(FAIZ_KEY, JSON.stringify(faizRates)); }
+
+function dayDiff(a, b) {
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
+function rateAt(periods, dateISO) {
+  let r = periods.length ? periods[0].rate : 0;
+  for (const p of periods) { if (p.from <= dateISO) r = p.rate; else break; }
+  return r;
+}
+// Borcun ana parasını azaltan olaylar (ödemeler / ödenmiş taksitler)
+function debtReductions(d) {
+  if (d.plan === 'flat') return (d.payments || []).map(p => ({ date: p.date, amount: Number(p.amount) }));
+  return debtSchedule(d).filter(s => s.paid).map(s => ({ date: s.dueDate, amount: s.amount }));
+}
+// Borç tarihinden bugüne, bakiye azaldıkça dönemsel basit faiz
+function accruedInterest(d, periods) {
+  const start = debtStartDate(d);
+  const today = todayISO();
+  const total = debtTotals(d).total;
+  const totalDays = Math.max(0, dayDiff(start, today));
+  if (!periods || !periods.length || totalDays <= 0 || total <= 0) {
+    return { interest: 0, days: totalDays, rates: [] };
+  }
+  const reductions = debtReductions(d);
+  const pts = new Set([start, today]);
+  reductions.forEach(r => { if (r.date > start && r.date < today) pts.add(r.date); });
+  periods.forEach(p => { if (p.from > start && p.from < today) pts.add(p.from); });
+  const sorted = [...pts].sort();
+  let interest = 0;
+  const used = new Set();
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const d0 = sorted[i], d1 = sorted[i + 1];
+    const days = dayDiff(d0, d1);
+    if (days <= 0) continue;
+    let bal = total;
+    reductions.forEach(r => { if (r.date <= d0) bal -= r.amount; });
+    bal = Math.max(0, bal);
+    if (bal <= 0) continue;
+    used.add(rateAt(periods, d0));
+    interest += bal * (rateAt(periods, d0) / 100) * (days / 365);
+  }
+  return { interest, days: totalDays, rates: [...used] };
 }
 
 // ============ RATES ============
@@ -2711,6 +2843,24 @@ function renderDebtDetail(d) {
   }
 
   renderDebtEquiv(d);
+  renderDebtFaiz(d);
+}
+
+function renderDebtFaiz(d) {
+  const el = document.getElementById('dFaiz');
+  const foot = document.getElementById('dFaizFoot');
+  const start = debtStartDate(d);
+  const total = debtTotals(d).total;
+  const yasal = accruedInterest(d, faizRates.yasal);
+  const avans = accruedInterest(d, faizRates.avans);
+  const rateLabel = res => !res.rates.length ? '—' : (res.rates.length === 1 ? '%' + fmtNum(res.rates[0], 2) : 'değişken');
+  const row = (name, res) => `<div class="equiv-line">
+      <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
+      <div class="equiv-val"><div class="q" style="font-size:14px;">${rateLabel(res)}</div><div class="r">yıllık</div></div>
+      <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">borç+faiz ${fmtTL(total + res.interest)}</div></div>
+    </div>`;
+  el.innerHTML = row('Yasal faiz', yasal) + row('Avans faizi', avans);
+  foot.innerHTML = `${fmtDateShort(start)} → bugün (${yasal.days} gün) · basit faiz, ödeme oldukça bakiye düşer · <strong>bilgi amaçlı, resmi değildir</strong>`;
 }
 
 function renderDebtPayments(d) {
@@ -2859,6 +3009,64 @@ document.getElementById('dDelete').addEventListener('click', () => {
   }
 });
 
+// ============ FAİZ ORANLARI EDİTÖRÜ ============
+const scrimRates = document.getElementById('scrimRates');
+
+function renderRateEditor() {
+  ['yasal', 'avans'].forEach(type => {
+    const host = document.getElementById(type + 'Periods');
+    host.innerHTML = editingRates[type].map(p => `
+      <div class="rate-row">
+        <input type="date" class="field-input rr-date" value="${p.from || ''}">
+        <input type="number" class="field-input rr-rate" step="0.01" inputmode="decimal" placeholder="yıllık %" value="${p.rate != null && !isNaN(p.rate) ? p.rate : ''}">
+        <button type="button" class="rr-del" data-type="${type}">×</button>
+      </div>`).join('') || `<div style="font-size:11px;color:var(--faint);font-family:'IBM Plex Mono',monospace;">Dönem yok.</div>`;
+    host.querySelectorAll('.rr-del').forEach((b, i) => b.addEventListener('click', () => {
+      syncRateInputs();
+      editingRates[type].splice(i, 1);
+      renderRateEditor();
+    }));
+  });
+}
+function syncRateInputs() {
+  ['yasal', 'avans'].forEach(type => {
+    const rows = document.querySelectorAll('#' + type + 'Periods .rate-row');
+    editingRates[type] = [...rows].map(r => ({
+      from: r.querySelector('.rr-date').value,
+      rate: parseFloat(r.querySelector('.rr-rate').value)
+    }));
+  });
+}
+function openRates() {
+  editingRates = {
+    yasal: faizRates.yasal.map(p => ({...p})),
+    avans: faizRates.avans.map(p => ({...p}))
+  };
+  renderRateEditor();
+  scrimRates.classList.add('open');
+}
+function closeRates() { scrimRates.classList.remove('open'); }
+
+document.getElementById('dRateEdit').addEventListener('click', openRates);
+document.getElementById('ratesClose').addEventListener('click', closeRates);
+document.getElementById('ratesCancel').addEventListener('click', closeRates);
+scrimRates.addEventListener('click', e => { if (e.target === scrimRates) closeRates(); });
+document.getElementById('addYasal').addEventListener('click', () => { syncRateInputs(); editingRates.yasal.push({ from: todayISO(), rate: '' }); renderRateEditor(); });
+document.getElementById('addAvans').addEventListener('click', () => { syncRateInputs(); editingRates.avans.push({ from: todayISO(), rate: '' }); renderRateEditor(); });
+document.getElementById('ratesSave').addEventListener('click', () => {
+  syncRateInputs();
+  ['yasal', 'avans'].forEach(type => {
+    faizRates[type] = editingRates[type]
+      .filter(p => p.from && !isNaN(p.rate))
+      .sort((a, b) => a.from.localeCompare(b.from));
+  });
+  persistFaizRates();
+  closeRates();
+  const d = store.debts.find(x => x.id === currentDebtId);
+  if (d) renderDebtFaiz(d);
+  toast('Oranlar kaydedildi', 'success');
+});
+
 document.getElementById('dRefresh').addEventListener('click', async () => {
   localStorage.removeItem(RATES_KEY);
   todayRates = null;
@@ -2920,6 +3128,7 @@ document.getElementById('dSettleBtn').addEventListener('click', () => {
 
 // ============ INIT ============
 load();
+loadFaizRates();
 refresh();
 setMode('receivables');
 
