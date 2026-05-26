@@ -1063,6 +1063,29 @@
     background-repeat: no-repeat;
     padding-right: 30px;
   }
+
+  /* Segmented control (ödeme şekli) */
+  .seg {
+    display: flex;
+    border: 1px solid var(--hair-2);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .seg-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--paper);
+    border: none;
+    border-right: 1px solid var(--hair-2);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn.active { background: var(--ink); color: var(--paper); }
 </style>
 </head>
 <body>
@@ -1337,19 +1360,44 @@
         <label class="field-label" id="dTitleLabel">Kuruluş / kredi adı *</label>
         <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off">
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label">Taksit tutarı (₺) *</label>
-          <input type="number" class="field-input" id="dAmount" placeholder="0" inputmode="decimal" step="0.01">
+      <div class="field">
+        <label class="field-label">Ödeme şekli</label>
+        <div class="seg" id="dPlanSeg">
+          <button type="button" class="seg-btn active" data-plan="installment">Taksitli</button>
+          <button type="button" class="seg-btn" data-plan="flat">Tek seferlik</button>
+        </div>
+      </div>
+      <div id="dInstFields">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Taksit tutarı (₺) *</label>
+            <input type="number" class="field-input" id="dAmount" placeholder="0" inputmode="decimal" step="0.01">
+          </div>
+          <div class="field">
+            <label class="field-label">Taksit sayısı *</label>
+            <input type="number" class="field-input" id="dCount" placeholder="12" inputmode="numeric" step="1" min="1">
+          </div>
         </div>
         <div class="field">
-          <label class="field-label">Taksit sayısı *</label>
-          <input type="number" class="field-input" id="dCount" placeholder="12" inputmode="numeric" step="1" min="1">
+          <label class="field-label">İlk taksit tarihi *</label>
+          <input type="date" class="field-input" id="dFirstDate">
+        </div>
+      </div>
+      <div id="dFlatFields" style="display:none;">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Toplam tutar (₺) *</label>
+            <input type="number" class="field-input" id="dTotal" placeholder="0" inputmode="decimal" step="0.01">
+          </div>
+          <div class="field">
+            <label class="field-label">Vade tarihi (opsiyonel)</label>
+            <input type="date" class="field-input" id="dDueDate">
+          </div>
         </div>
       </div>
       <div class="field">
-        <label class="field-label">İlk taksit tarihi *</label>
-        <input type="date" class="field-input" id="dFirstDate">
+        <label class="field-label">Borç tarihi (kur için) *</label>
+        <input type="date" class="field-input" id="dStartDate">
       </div>
       <div class="field">
         <label class="field-label">Açıklama (opsiyonel)</label>
@@ -1391,18 +1439,74 @@
     </div>
 
     <div class="sheet-body" style="padding:0;">
+
+      <!-- Kur karşılığı · kâr/zarar -->
+      <div class="equiv-section">
+        <div class="equiv-head">
+          <div class="equiv-title">Kur karşılığı · kâr / zarar</div>
+          <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
+        </div>
+        <div class="equiv-table">
+          <div class="equiv-colhead">
+            <div>Varlık</div>
+            <div>Borçlanınca</div>
+            <div>Bugün</div>
+          </div>
+          <div id="dEquiv">
+            <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Hesaplanıyor...</div>
+          </div>
+        </div>
+        <div class="equiv-footnote" id="dEquivFoot">—</div>
+      </div>
+
+      <!-- Taksit planı / ödemeler -->
       <div class="txs-section">
         <div class="equiv-head">
-          <div class="equiv-title">Taksit planı</div>
+          <div class="equiv-title" id="dPlanTitle">Taksit planı</div>
           <div class="equiv-title" id="dDetailProgress" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
+        </div>
+        <div class="txs-actions" id="dPayActions" style="display:none;">
+          <button class="action-btn primary" id="dAddPayBtn"><span class="sign">−</span> Ödeme ekle</button>
+          <button class="action-btn" id="dSettleBtn">Tamamı ödendi</button>
         </div>
         <div class="tx-list" id="dInstList"></div>
         <div class="equiv-footnote" id="dDetailFoot">Taksite dokunarak ödendi / ödenmedi işaretle.</div>
       </div>
+
     </div>
     <div class="sheet-footer">
       <button class="btn btn-danger" id="dDelete">Sil</button>
       <button class="btn btn-ghost" id="dEdit">Düzenle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DEBT PAYMENT SHEET (tek seferlik borç ödemesi) ============ -->
+<div class="scrim" id="scrimDebtPay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Ödeme <em>ekle</em></div>
+        <div class="sheet-sub">Bu borca yapılan geri ödeme</div>
+      </div>
+      <button class="sheet-close" id="debtPayClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Tutar (₺) *</label>
+          <input type="number" class="field-input" id="dpAmount" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="field">
+          <label class="field-label">Tarih *</label>
+          <input type="date" class="field-input" id="dpDate">
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="debtPayCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="debtPaySave">Kaydet</button>
     </div>
   </div>
 </div>
@@ -1430,6 +1534,7 @@ let store = { contacts: [], debts: [] };
 let filter = 'active';
 let mode = 'receivables'; // 'receivables' | 'debts'
 let debtFilter = 'active';
+let dPlan = 'installment'; // borç formu: 'installment' | 'flat'
 let editingContactId = null;
 let currentContactId = null;
 let editingDebtId = null;
@@ -1445,6 +1550,11 @@ function load() {
   } catch(e) { store = { contacts: [] }; }
   if (!store.contacts) store.contacts = [];
   if (!store.debts) store.debts = [];
+  store.debts.forEach(d => {
+    if (!d.plan) d.plan = 'installment';
+    if (d.plan === 'installment' && !d.paidIdx) d.paidIdx = [];
+    if (d.plan === 'flat' && !d.payments) d.payments = [];
+  });
 }
 function persist() { localStorage.setItem(KEY, JSON.stringify(store)); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -1554,6 +1664,7 @@ function addMonths(iso, n) {
 }
 
 function debtSchedule(d) {
+  if (d.plan === 'flat') return [];
   const out = [];
   const paid = d.paidIdx || [];
   for (let i = 0; i < d.count; i++) {
@@ -1568,21 +1679,32 @@ function debtSchedule(d) {
   return out;
 }
 function debtTotals(d) {
+  if (d.plan === 'flat') {
+    const total = Number(d.total) || 0;
+    const paid = (d.payments || []).reduce((s, p) => s + Number(p.amount), 0);
+    return { total, paid, remaining: Math.max(0, total - paid), paidCount: null };
+  }
   const total = Number(d.amount) * d.count;
   const paidCount = (d.paidIdx || []).length;
   const paid = Number(d.amount) * paidCount;
   return { total, paid, remaining: Math.max(0, total - paid), paidCount };
 }
-function debtIsSettled(d) { return (d.paidIdx || []).length >= d.count; }
-function debtIsActive(d)  { return (d.paidIdx || []).length < d.count; }
+function debtIsSettled(d) { const t = debtTotals(d); return t.total > 0 && t.paid >= t.total - 0.01; }
+function debtIsActive(d)  { return debtTotals(d).remaining > 0.01; }
+function debtStartDate(d) {
+  return d.startDate || d.firstDate || (d.payments && d.payments[0] && d.payments[0].date) || todayISO();
+}
 function debtNextDue(d) {
+  if (d.plan === 'flat') return d.dueDate || null;
   const next = debtSchedule(d).find(s => !s.paid);
   return next ? next.dueDate : null;
 }
 function debtHasOverdue(d) {
+  if (d.plan === 'flat') return !!d.dueDate && debtTotals(d).remaining > 0.01 && daysUntil(d.dueDate) < 0;
   return debtSchedule(d).some(s => !s.paid && daysUntil(s.dueDate) < 0);
 }
 function debtOverdueAmount(d) {
+  if (d.plan === 'flat') return (!!d.dueDate && daysUntil(d.dueDate) < 0) ? debtTotals(d).remaining : 0;
   let sum = 0;
   debtSchedule(d).forEach(s => { if (!s.paid && daysUntil(s.dueDate) < 0) sum += s.amount; });
   return sum;
@@ -2361,14 +2483,17 @@ function renderDebts() {
     const cat = DEBT_CATS[d.category] || DEBT_CATS.loan;
     const chip = d.category === 'personal' ? initials(d.title) : cat.short;
     const next = debtNextDue(d);
+    const metaMid = d.plan === 'flat'
+      ? (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz')
+      : `${t.paidCount}/${d.count} taksit`;
 
     return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
       <div class="cat-chip ${d.category}">${chip}</div>
       <div class="contact-main">
         <div class="contact-name">${escapeHtml(d.title)}</div>
         <div class="contact-meta">
-          ${cat.label}<span class="dot">·</span>${t.paidCount}/${d.count} taksit
-          ${!settled && next ? `<span class="dot">·</span>sonraki ${fmtDateShort(next)}` : ''}
+          ${cat.label}<span class="dot">·</span>${metaMid}
+          ${!settled && d.plan === 'installment' && next ? `<span class="dot">·</span>sonraki ${fmtDateShort(next)}` : ''}
         </div>
       </div>
       <div class="contact-amount">
@@ -2405,12 +2530,32 @@ function updateDebtTitleLabel() {
   else { lbl.textContent = 'Kuruluş / kredi adı *'; inp.placeholder = 'Örn: Garanti İhtiyaç Kredisi'; }
 }
 
+function setDebtPlan(p) {
+  dPlan = p;
+  document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.plan === p));
+  document.getElementById('dInstFields').style.display = p === 'installment' ? '' : 'none';
+  document.getElementById('dFlatFields').style.display = p === 'flat' ? '' : 'none';
+  updateDebtHint();
+}
+
 function updateDebtHint() {
+  const box = document.getElementById('dHint');
+  const body = document.getElementById('dHintBody');
+  if (dPlan === 'flat') {
+    const total = parseFloat(document.getElementById('dTotal').value);
+    const due = document.getElementById('dDueDate').value;
+    if (!total || total <= 0) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    body.className = 'hint-grid';
+    body.innerHTML = `
+      <div class="hint-cell"><div class="sym">TOPLAM</div><div class="val">${fmtTL(total)}</div></div>
+      <div class="hint-cell"><div class="sym">ÖDEME</div><div class="val">tek seferlik</div></div>
+      <div class="hint-cell"><div class="sym">VADE</div><div class="val" style="font-size:12px;">${due ? fmtDateShort(due) : 'vadesiz'}</div></div>`;
+    return;
+  }
   const amt = parseFloat(document.getElementById('dAmount').value);
   const cnt = parseInt(document.getElementById('dCount').value, 10);
   const first = document.getElementById('dFirstDate').value;
-  const box = document.getElementById('dHint');
-  const body = document.getElementById('dHintBody');
   if (!amt || amt <= 0 || !cnt || cnt < 1 || !first) { box.style.display = 'none'; return; }
   box.style.display = '';
   body.className = 'hint-grid';
@@ -2426,10 +2571,14 @@ function openDebtForm(id) {
   document.getElementById('debtFormTitle').innerHTML = d ? 'Borcu <em>düzenle</em>' : 'Yeni <em>borç</em>';
   document.getElementById('dCategory').value = d ? d.category : 'loan';
   document.getElementById('dTitle').value = d ? d.title : '';
-  document.getElementById('dAmount').value = d ? d.amount : '';
-  document.getElementById('dCount').value = d ? d.count : '';
-  document.getElementById('dFirstDate').value = d ? d.firstDate : todayISO();
+  document.getElementById('dAmount').value = d && d.amount != null ? d.amount : '';
+  document.getElementById('dCount').value = d && d.count != null ? d.count : '';
+  document.getElementById('dFirstDate').value = d && d.firstDate ? d.firstDate : todayISO();
+  document.getElementById('dTotal').value = d && d.total != null ? d.total : '';
+  document.getElementById('dDueDate').value = d && d.dueDate ? d.dueDate : '';
+  document.getElementById('dStartDate').value = d ? debtStartDate(d) : todayISO();
   document.getElementById('dNote').value = d && d.note ? d.note : '';
+  setDebtPlan(d ? (d.plan || 'installment') : 'installment');
   updateDebtTitleLabel();
   updateDebtHint();
   scrimDebtForm.classList.add('open');
@@ -2437,8 +2586,14 @@ function openDebtForm(id) {
 }
 function closeDebtForm() { scrimDebtForm.classList.remove('open'); editingDebtId = null; }
 
-document.getElementById('dCategory').addEventListener('change', updateDebtTitleLabel);
-['dAmount', 'dCount', 'dFirstDate'].forEach(idv => {
+document.getElementById('dCategory').addEventListener('change', function() {
+  updateDebtTitleLabel();
+  if (!editingDebtId) setDebtPlan(this.value === 'personal' ? 'flat' : 'installment');
+});
+document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => {
+  b.addEventListener('click', () => setDebtPlan(b.dataset.plan));
+});
+['dAmount', 'dCount', 'dFirstDate', 'dTotal', 'dDueDate'].forEach(idv => {
   const elx = document.getElementById(idv);
   elx.addEventListener('input', updateDebtHint);
   elx.addEventListener('change', updateDebtHint);
@@ -2447,30 +2602,55 @@ document.getElementById('debtFormCancel').addEventListener('click', closeDebtFor
 document.getElementById('debtFormClose').addEventListener('click', closeDebtForm);
 scrimDebtForm.addEventListener('click', e => { if (e.target === scrimDebtForm) closeDebtForm(); });
 
-document.getElementById('debtFormSave').addEventListener('click', () => {
+document.getElementById('debtFormSave').addEventListener('click', async () => {
   const category = document.getElementById('dCategory').value;
   const title = document.getElementById('dTitle').value.trim();
-  const amount = parseFloat(document.getElementById('dAmount').value);
-  const count = parseInt(document.getElementById('dCount').value, 10);
-  const firstDate = document.getElementById('dFirstDate').value;
+  const startDate = document.getElementById('dStartDate').value;
   const note = document.getElementById('dNote').value.trim();
 
   if (!title) { toast('Ad gerekli', 'error'); return; }
-  if (!amount || amount <= 0) { toast('Geçerli taksit tutarı girin', 'error'); return; }
-  if (!count || count < 1) { toast('Taksit sayısı gerekli', 'error'); return; }
-  if (!firstDate) { toast('İlk taksit tarihi gerekli', 'error'); return; }
+  if (!startDate) { toast('Borç tarihi gerekli', 'error'); return; }
+
+  let fields;
+  if (dPlan === 'flat') {
+    const total = parseFloat(document.getElementById('dTotal').value);
+    const dueDate = document.getElementById('dDueDate').value;
+    if (!total || total <= 0) { toast('Geçerli tutar girin', 'error'); return; }
+    fields = { plan: 'flat', total, dueDate };
+  } else {
+    const amount = parseFloat(document.getElementById('dAmount').value);
+    const count = parseInt(document.getElementById('dCount').value, 10);
+    const firstDate = document.getElementById('dFirstDate').value;
+    if (!amount || amount <= 0) { toast('Geçerli taksit tutarı girin', 'error'); return; }
+    if (!count || count < 1) { toast('Taksit sayısı gerekli', 'error'); return; }
+    if (!firstDate) { toast('İlk taksit tarihi gerekli', 'error'); return; }
+    fields = { plan: 'installment', amount, count, firstDate };
+  }
+
+  // Borç tarihindeki kuru sabitle (kâr/zarar için)
+  let snapshot = null;
+  try { snapshot = await getHistoricalRates(startDate); } catch(e) {}
 
   if (editingDebtId) {
     const d = store.debts.find(x => x.id === editingDebtId);
-    d.category = category; d.title = title; d.amount = amount; d.count = count;
-    d.firstDate = firstDate; d.note = note;
-    d.paidIdx = (d.paidIdx || []).filter(i => i < count);
+    const planChanged = d.plan !== fields.plan;
+    d.category = category; d.title = title; d.note = note; d.startDate = startDate;
+    if (snapshot && (!d.snapshot || d.snapshot.requestedDate !== startDate)) d.snapshot = snapshot;
+    if (fields.plan === 'installment') {
+      d.plan = 'installment'; d.amount = fields.amount; d.count = fields.count; d.firstDate = fields.firstDate;
+      d.paidIdx = planChanged ? [] : (d.paidIdx || []).filter(i => i < fields.count);
+      delete d.total; delete d.dueDate; delete d.payments;
+    } else {
+      d.plan = 'flat'; d.total = fields.total; d.dueDate = fields.dueDate;
+      if (planChanged || !d.payments) d.payments = [];
+      delete d.amount; delete d.count; delete d.firstDate; delete d.paidIdx;
+    }
     toast('Güncellendi', 'success');
   } else {
-    store.debts.push({
-      id: uid(), category, title, amount, count, firstDate, note,
-      paidIdx: [], createdAt: Date.now()
-    });
+    const base = { id: uid(), category, title, note, startDate, snapshot, createdAt: Date.now() };
+    if (fields.plan === 'installment') Object.assign(base, fields, { paidIdx: [] });
+    else Object.assign(base, fields, { payments: [] });
+    store.debts.push(base);
     toast('Borç eklendi', 'success');
   }
   persist(); refresh(); closeDebtForm();
@@ -2510,8 +2690,112 @@ function renderDebtDetail(d) {
   if (d.note) { noteEl.style.display = ''; noteEl.textContent = d.note; }
   else noteEl.style.display = 'none';
 
-  document.getElementById('dDetailProgress').textContent = `${t.paidCount}/${d.count} ödendi`;
-  renderInstallments(d);
+  const planTitle = document.getElementById('dPlanTitle');
+  const payActions = document.getElementById('dPayActions');
+  const foot = document.getElementById('dDetailFoot');
+  if (d.plan === 'flat') {
+    document.getElementById('dDetailCat').textContent = cat.label + ' · tek seferlik';
+    planTitle.textContent = 'Ödemeler';
+    payActions.style.display = '';
+    document.getElementById('dDetailProgress').textContent = `${fmtTL(t.paid)} / ${fmtTL(t.total)}`;
+    foot.textContent = d.dueDate ? ('Vade: ' + fmtDate(d.dueDate)) : 'Vadesiz borç.';
+    renderDebtPayments(d);
+  } else {
+    document.getElementById('dDetailCat').textContent = cat.label + ' · taksitli';
+    planTitle.textContent = 'Taksit planı';
+    payActions.style.display = 'none';
+    document.getElementById('dDetailProgress').textContent = `${t.paidCount}/${d.count} ödendi`;
+    foot.textContent = 'Taksite dokunarak ödendi / ödenmedi işaretle.';
+    renderInstallments(d);
+  }
+
+  renderDebtEquiv(d);
+}
+
+function renderDebtPayments(d) {
+  const el = document.getElementById('dInstList');
+  const pays = [...(d.payments || [])].sort((a, b) => b.date.localeCompare(a.date));
+  if (pays.length === 0) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Henüz ödeme yok. Üstteki butonla geri ödeme ekleyin.</div>`;
+    return;
+  }
+  el.innerHTML = pays.map(p => `
+    <div class="inst" data-payid="${p.id}">
+      <div class="inst-num" style="background:var(--forest);color:var(--paper);border-color:var(--forest);">−</div>
+      <div class="tx-body">
+        <div class="tx-label">Ödeme</div>
+        <div class="tx-meta"><span>${fmtDate(p.date)}</span><span class="pill">silmek için dokun</span></div>
+      </div>
+      <div class="tx-amt">${fmtTL(p.amount)}</div>
+    </div>`).join('');
+  el.querySelectorAll('.inst').forEach(row => {
+    row.addEventListener('click', () => {
+      const pid = row.dataset.payid;
+      const pp = (d.payments || []).find(x => x.id === pid);
+      if (pp && confirm(`Bu ödeme silinsin mi? (${fmtTL(pp.amount)})`)) {
+        d.payments = d.payments.filter(x => x.id !== pid);
+        persist(); renderDebtDetail(d); renderSummary(); renderDebts();
+        toast('Silindi', 'success');
+      }
+    });
+  });
+}
+
+// Borçlanma günündeki kura göre kalan borcun döviz/altın karşılığı ve kâr/zarar.
+async function renderDebtEquiv(d) {
+  const el = document.getElementById('dEquiv');
+  const foot = document.getElementById('dEquivFoot');
+  const remaining = debtTotals(d).remaining;
+
+  if (remaining <= 0.01) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Borç kapandı — açık kur farkı yok.</div>`;
+    foot.textContent = '—';
+    return;
+  }
+  el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Hesaplanıyor...</div>`;
+
+  try {
+    const today = todayRates || await getTodayRates();
+    if (!todayRates) { todayRates = today; renderMarket(today); }
+    const startDate = debtStartDate(d);
+    let snap = d.snapshot;
+    if (!snap || !snap.tryPerUsd) snap = await getHistoricalRates(startDate);
+
+    const assets = [];
+    if (snap.goldGramTRY && today.goldGramTRY) {
+      const q = remaining / snap.goldGramTRY;
+      assets.push({ key: 'gold', chip: 'Au', name: 'Altın', q: `${fmtNum(q, 2)}g`,
+        rate: `${fmtNum(snap.goldGramTRY, 0)} ₺/g${snap.goldApprox ? ' ≈' : ''}`, nowTL: q * today.goldGramTRY });
+    }
+    {
+      const q = remaining / snap.tryPerUsd;
+      assets.push({ key: 'usd', chip: '$', name: 'Dolar', q: `$${fmtNum(q, 0)}`,
+        rate: `${fmtNum(snap.tryPerUsd, 2)} ₺/$`, nowTL: q * today.tryPerUsd });
+    }
+    {
+      const q = remaining / snap.tryPerEur;
+      assets.push({ key: 'eur', chip: '€', name: 'Euro', q: `€${fmtNum(q, 0)}`,
+        rate: `${fmtNum(snap.tryPerEur, 2)} ₺/€`, nowTL: q * today.tryPerEur });
+    }
+
+    el.innerHTML = assets.map(a => {
+      const pl = a.nowTL - remaining; // borçlu için "+" = kâr (TL'de borçlanmak avantajlı)
+      const pct = (pl / remaining) * 100;
+      const plHtml = Math.abs(pct) < 0.05 ? '' :
+        `<div class="delta ${pl > 0 ? 'up' : 'dn'}">${pl > 0 ? 'kâr' : 'zarar'} ${pl > 0 ? '+' : '−'}${fmtTL(Math.abs(pl))}</div>`;
+      return `<div class="equiv-line">
+        <div class="equiv-asset"><div class="asset-chip ${a.key}">${a.chip}</div>${a.name}</div>
+        <div class="equiv-val"><div class="q">${a.q}</div><div class="r">${a.rate}</div></div>
+        <div class="equiv-val"><div class="q">${fmtTL(a.nowTL)}</div>${plHtml}</div>
+      </div>`;
+    }).join('');
+
+    foot.textContent = `Kalan ${fmtTL(remaining)} · borç tarihi ${snap.requestedDate || startDate} · bugün ${today.date} · "+" = TL'de borçlanmak kârda`;
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;">Kur alınamadı — ağ bağlantısını kontrol edin.</div>`;
+    foot.textContent = '—';
+  }
 }
 
 function renderInstallments(d) {
@@ -2571,6 +2855,65 @@ document.getElementById('dDelete').addEventListener('click', () => {
     persist(); refresh();
     scrimDebt.classList.remove('open');
     toast('Silindi', 'success');
+  }
+});
+
+document.getElementById('dRefresh').addEventListener('click', async () => {
+  localStorage.removeItem(RATES_KEY);
+  todayRates = null;
+  try {
+    const r = await getTodayRates();
+    todayRates = r;
+    renderMarket(r);
+    const d = store.debts.find(x => x.id === currentDebtId);
+    if (d) renderDebtEquiv(d);
+    toast('Kurlar yenilendi', 'success');
+  } catch(e) { toast('Kur alınamadı', 'error'); }
+});
+
+// ============ DEBT PAYMENT (tek seferlik borç) ============
+const scrimDebtPay = document.getElementById('scrimDebtPay');
+
+function openDebtPay() {
+  document.getElementById('dpAmount').value = '';
+  document.getElementById('dpDate').value = todayISO();
+  scrimDebtPay.classList.add('open');
+  setTimeout(() => document.getElementById('dpAmount').focus(), 250);
+}
+function closeDebtPay() { scrimDebtPay.classList.remove('open'); }
+
+document.getElementById('dAddPayBtn').addEventListener('click', openDebtPay);
+document.getElementById('debtPayCancel').addEventListener('click', closeDebtPay);
+document.getElementById('debtPayClose').addEventListener('click', closeDebtPay);
+scrimDebtPay.addEventListener('click', e => { if (e.target === scrimDebtPay) closeDebtPay(); });
+
+document.getElementById('debtPaySave').addEventListener('click', () => {
+  const d = store.debts.find(x => x.id === currentDebtId);
+  if (!d) return;
+  const amount = parseFloat(document.getElementById('dpAmount').value);
+  const date = document.getElementById('dpDate').value;
+  if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
+  if (!date) { toast('Tarih gerekli', 'error'); return; }
+  const rem = debtTotals(d).remaining;
+  if (amount > rem + 0.01) {
+    if (!confirm(`Ödeme (${fmtTL(amount)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
+  }
+  d.payments = d.payments || [];
+  d.payments.push({ id: uid(), amount, date });
+  persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
+  toast('Ödeme eklendi', 'success');
+});
+
+document.getElementById('dSettleBtn').addEventListener('click', () => {
+  const d = store.debts.find(x => x.id === currentDebtId);
+  if (!d) return;
+  const rem = debtTotals(d).remaining;
+  if (rem <= 0.01) { toast('Borç zaten kapalı', 'success'); return; }
+  if (confirm(`Kalan ${fmtTL(rem)} tamamen ödendi olarak işaretlensin mi?`)) {
+    d.payments = d.payments || [];
+    d.payments.push({ id: uid(), amount: rem, date: todayISO() });
+    persist(); renderDebtDetail(d); renderSummary(); renderDebts();
+    toast('Borç kapatıldı', 'success');
   }
 });
 
