@@ -1167,6 +1167,8 @@
     cursor: pointer;
   }
   .dtab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+  .fxrow { cursor: pointer; }
+  .fxrow:active { background: var(--paper-2); }
 </style>
 </head>
 <body>
@@ -1361,10 +1363,7 @@
         <div class="equiv-section">
           <div class="equiv-head">
             <div class="equiv-title">Değer karşılıkları</div>
-            <div style="display:flex;gap:14px;">
-              <button class="equiv-refresh" id="aFxEdit">el ile gir</button>
-              <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
-            </div>
+            <button class="equiv-refresh" id="aRefresh">↻ yenile</button>
           </div>
           <div class="equiv-table">
             <div class="equiv-colhead">
@@ -1635,10 +1634,7 @@
         <div class="equiv-section">
           <div class="equiv-head">
             <div class="equiv-title">Kur karşılığı · kâr / zarar</div>
-            <div style="display:flex;gap:14px;">
-              <button class="equiv-refresh" id="dFxEdit">el ile gir</button>
-              <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
-            </div>
+            <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
           </div>
           <div class="equiv-table">
             <div class="equiv-colhead">
@@ -2758,7 +2754,7 @@ function fxRowsHtml(results, kind) {
       const label = kind === 'debt' ? (up ? 'kâr +' : 'zarar −') : (up ? '+' : '−');
       plHtml = `<div class="delta ${up ? 'up' : 'dn'}">${label}${fmtTL(Math.abs(pl))}</div>`;
     }
-    return `<div class="equiv-line">
+    return `<div class="equiv-line fxrow" data-fxkey="${a.key}">
       <div class="equiv-asset"><div class="asset-chip ${a.key}">${a.chip}</div>${a.name}</div>
       <div class="equiv-val"><div class="q">${a.q}</div><div class="r">${a.rateLabel}</div></div>
       <div class="equiv-val"><div class="q">${fmtTL(a.nowTL)}</div>${plHtml}</div>
@@ -2790,15 +2786,16 @@ async function renderEquivalents(c) {
       return;
     }
     el.innerHTML = fxRowsHtml(results, 'recv');
+    el.querySelectorAll('.fxrow').forEach(r => r.addEventListener('click', () => openFxEditor('contact', c.id, r.dataset.fxkey)));
     // Döviz cinsinden alacaksa: kalan tutarı bugünkü kurdan göster
     const nc = contactNativeCur(c);
     const nr = nc ? results.find(x => x.key === curKey(nc)) : null;
     if (nr) {
       document.getElementById('aBalance').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
       document.getElementById('aBreak').innerHTML = `<span>${nr.q} kalan</span><br><span style="color:var(--muted);">bugünkü kurdan</span>`;
-      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · tahsilatlar o günkü kurdan düşülür`;
+      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · değiştirmek için satıra dokun`;
     } else {
-      foot.textContent = `Kalan alacak ${fmtTL(t.balance)} · bugün ${today.date} · tahsilatlar o günkü kurdan düşülür · "+" = döviz/altın verseydiniz fazlası`;
+      foot.textContent = `Kalan alacak ${fmtTL(t.balance)} · bugün ${today.date} · "+" = döviz/altın verseydiniz fazlası · satıra dokun: el ile gir`;
     }
   } catch(e) {
     console.error(e);
@@ -3391,13 +3388,14 @@ async function renderDebtEquiv(d) {
       return;
     }
     el.innerHTML = fxRowsHtml(results, 'debt');
+    el.querySelectorAll('.fxrow').forEach(r => r.addEventListener('click', () => openFxEditor('debt', d.id, r.dataset.fxkey)));
     // Döviz cinsinden borçsa: kalan borcu bugünkü kurdan göster
     const nr = isForeign(d) ? results.find(x => x.key === curKey(d.cur)) : null;
     if (nr) {
       document.getElementById('dDetailRemaining').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
-      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · borç ${fmtDateShort(startDate)} · ödemeler o günkü kurdan düşülür`;
+      foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · değiştirmek için satıra dokun`;
     } else {
-      foot.textContent = `Kalan ${fmtTL(remaining)} · borç ${fmtDateShort(startDate)} · bugün ${today.date} · ödemeler o günkü kurdan düşülür · "+" = TL'de borçlanmak kârda`;
+      foot.textContent = `Kalan ${fmtTL(remaining)} · borç ${fmtDateShort(startDate)} · "+" = TL'de borçlanmak kârda · satıra dokun: el ile gir`;
     }
   } catch(e) {
     console.error(e);
@@ -3572,7 +3570,7 @@ function fxEntity() {
     ? store.contacts.find(x => x.id === fxEditCtx.id)
     : store.debts.find(x => x.id === fxEditCtx.id);
 }
-function openFxEditor(kind, id) {
+function openFxEditor(kind, id, focusKey) {
   fxEditCtx = { kind, id };
   const ent = fxEntity();
   const man = (ent && ent.fxManual) || {};
@@ -3583,6 +3581,10 @@ function openFxEditor(kind, id) {
     document.getElementById('fx_' + k + '_rate').value = mo.rate != null ? mo.rate : (r ? +r.thenRate.toFixed(2) : '');
   });
   scrimFx.classList.add('open');
+  if (focusKey) {
+    const f = document.getElementById('fx_' + focusKey + '_qty');
+    if (f) setTimeout(() => { f.scrollIntoView({ block: 'center' }); f.focus(); }, 250);
+  }
 }
 function closeFx() { scrimFx.classList.remove('open'); }
 function rerenderFxEntity(ent) {
@@ -3590,8 +3592,6 @@ function rerenderFxEntity(ent) {
   if (fxEditCtx.kind === 'contact') renderEquivalents(ent);
   else renderDebtEquiv(ent);
 }
-document.getElementById('aFxEdit').addEventListener('click', () => { if (currentContactId) openFxEditor('contact', currentContactId); });
-document.getElementById('dFxEdit').addEventListener('click', () => { if (currentDebtId) openFxEditor('debt', currentDebtId); });
 document.getElementById('fxClose').addEventListener('click', closeFx);
 document.getElementById('fxCancel').addEventListener('click', closeFx);
 scrimFx.addEventListener('click', e => { if (e.target === scrimFx) closeFx(); });
