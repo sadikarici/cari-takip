@@ -1135,6 +1135,30 @@
     font-size: 14px;
   }
   .bank-row:last-child { border-bottom: none; }
+
+  /* Borç detayı sekmeleri */
+  .dtabs {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--paper);
+    border-bottom: 1px solid var(--hair);
+  }
+  .dtab {
+    flex: 1;
+    padding: 13px 8px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .dtab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -1511,56 +1535,68 @@
 
     <div class="sheet-body" style="padding:0;">
 
-      <!-- Kur karşılığı · kâr/zarar -->
-      <div class="equiv-section">
-        <div class="equiv-head">
-          <div class="equiv-title">Kur karşılığı · kâr / zarar</div>
-          <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
-        </div>
-        <div class="equiv-table">
-          <div class="equiv-colhead">
-            <div>Varlık</div>
-            <div>Borçlanınca</div>
-            <div>Bugün</div>
-          </div>
-          <div id="dEquiv">
-            <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Hesaplanıyor...</div>
-          </div>
-        </div>
-        <div class="equiv-footnote" id="dEquivFoot">—</div>
+      <div class="dtabs">
+        <button type="button" class="dtab active" data-tab="pay">Ödemeler</button>
+        <button type="button" class="dtab" data-tab="rates">Kur & Faiz</button>
       </div>
 
-      <!-- İşlemiş faiz (yasal / avans) -->
-      <div class="equiv-section">
-        <div class="equiv-head">
-          <div class="equiv-title">İşlemiş faiz · bilgi amaçlı</div>
-          <button class="equiv-refresh" id="dRateEdit">oranları düzenle</button>
-        </div>
-        <div class="equiv-table">
-          <div class="equiv-colhead">
-            <div>Tür</div>
-            <div>Oran</div>
-            <div>İşlemiş faiz</div>
+      <!-- Sekme: Ödemeler -->
+      <div class="dpanel" id="dPanelPay">
+        <div class="txs-section">
+          <div class="equiv-head">
+            <div class="equiv-title" id="dPlanTitle">Taksit planı</div>
+            <div class="equiv-title" id="dDetailProgress" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
           </div>
-          <div id="dFaiz">
-            <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">—</div>
+          <div class="txs-actions" id="dPayActions" style="display:none;">
+            <button class="action-btn primary" id="dAddPayBtn"><span class="sign">−</span> Ödeme ekle</button>
+            <button class="action-btn" id="dSettleBtn">Tamamı ödendi</button>
           </div>
+          <div class="tx-list" id="dInstList"></div>
+          <div class="equiv-footnote" id="dDetailFoot">Taksite dokunarak ödendi / ödenmedi işaretle.</div>
         </div>
-        <div class="equiv-footnote" id="dFaizFoot">—</div>
       </div>
 
-      <!-- Taksit planı / ödemeler -->
-      <div class="txs-section">
-        <div class="equiv-head">
-          <div class="equiv-title" id="dPlanTitle">Taksit planı</div>
-          <div class="equiv-title" id="dDetailProgress" style="font-weight:normal;text-transform:none;letter-spacing:0;">—</div>
+      <!-- Sekme: Kur & Faiz -->
+      <div class="dpanel" id="dPanelRates" style="display:none;">
+
+        <!-- Kur karşılığı · kâr/zarar -->
+        <div class="equiv-section">
+          <div class="equiv-head">
+            <div class="equiv-title">Kur karşılığı · kâr / zarar</div>
+            <button class="equiv-refresh" id="dRefresh">↻ yenile</button>
+          </div>
+          <div class="equiv-table">
+            <div class="equiv-colhead">
+              <div>Varlık</div>
+              <div>Borçlanınca</div>
+              <div>Bugün</div>
+            </div>
+            <div id="dEquiv">
+              <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Hesaplanıyor...</div>
+            </div>
+          </div>
+          <div class="equiv-footnote" id="dEquivFoot">—</div>
         </div>
-        <div class="txs-actions" id="dPayActions" style="display:none;">
-          <button class="action-btn primary" id="dAddPayBtn"><span class="sign">−</span> Ödeme ekle</button>
-          <button class="action-btn" id="dSettleBtn">Tamamı ödendi</button>
+
+        <!-- İşlemiş faiz (yasal / avans) -->
+        <div class="equiv-section">
+          <div class="equiv-head">
+            <div class="equiv-title">İşlemiş faiz · bilgi amaçlı</div>
+            <button class="equiv-refresh" id="dRateEdit">oranları düzenle</button>
+          </div>
+          <div class="equiv-table">
+            <div class="equiv-colhead">
+              <div>Tür</div>
+              <div>Oran</div>
+              <div>İşlemiş faiz</div>
+            </div>
+            <div id="dFaiz">
+              <div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">—</div>
+            </div>
+          </div>
+          <div class="equiv-footnote" id="dFaizFoot">—</div>
         </div>
-        <div class="tx-list" id="dInstList"></div>
-        <div class="equiv-footnote" id="dDetailFoot">Taksite dokunarak ödendi / ödenmedi işaretle.</div>
+
       </div>
 
     </div>
@@ -2953,8 +2989,18 @@ function openDebt(id) {
   const d = store.debts.find(x => x.id === id);
   if (!d) return;
   renderDebtDetail(d);
+  setDebtTab('pay');
   scrimDebt.classList.add('open');
 }
+
+function setDebtTab(tab) {
+  document.querySelectorAll('#scrimDebt .dtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('dPanelPay').style.display = tab === 'pay' ? '' : 'none';
+  document.getElementById('dPanelRates').style.display = tab === 'rates' ? '' : 'none';
+  const body = document.querySelector('#scrimDebt .sheet-body');
+  if (body) body.scrollTop = 0;
+}
+document.querySelectorAll('#scrimDebt .dtab').forEach(b => b.addEventListener('click', () => setDebtTab(b.dataset.tab)));
 
 function renderDebtDetail(d) {
   const cat = DEBT_CATS[d.category] || DEBT_CATS.loan;
