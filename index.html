@@ -1169,6 +1169,39 @@
   .dtab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
   .fxrow { cursor: pointer; }
   .fxrow:active { background: var(--paper-2); }
+  .kz-box {
+    margin: 8px 0 2px;
+    border: 1px solid var(--hair-2);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    background: var(--paper-2);
+  }
+  .kz-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .kz-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+    padding: 3px 0;
+  }
+  .kz-row .up { color: var(--forest); }
+  .kz-row .dn { color: var(--red); }
+  .kz-total {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--hair);
+    font-weight: 600;
+    color: var(--ink);
+  }
 </style>
 </head>
 <body>
@@ -1376,6 +1409,7 @@
             </div>
           </div>
           <div class="equiv-footnote" id="aEquivFoot">—</div>
+          <div id="aKz"></div>
         </div>
 
         <!-- İşlemiş faiz -->
@@ -1395,6 +1429,7 @@
             </div>
           </div>
           <div class="equiv-footnote" id="aFaizFoot">—</div>
+          <div id="aKzF"></div>
         </div>
 
       </div>
@@ -1647,6 +1682,7 @@
             </div>
           </div>
           <div class="equiv-footnote" id="dEquivFoot">—</div>
+          <div id="dKz"></div>
         </div>
 
         <!-- İşlemiş faiz (yasal / avans) -->
@@ -1666,6 +1702,7 @@
             </div>
           </div>
           <div class="equiv-footnote" id="dFaizFoot">—</div>
+          <div id="dKzF"></div>
         </div>
 
       </div>
@@ -2733,12 +2770,21 @@ async function fxRunningBalance(principal, payments, manual) {
       if (mo.qty != null && !isNaN(mo.qty)) units = Number(mo.qty);
       if (mo.rate != null && !isNaN(mo.rate)) thenRate = Number(mo.rate);
     }
+    // Gerçekleşen kâr/zarar: her tahsilatın TL'si ile, o tutarın bu varlık
+    // cinsinden verildiği tarihteki değeri arasındaki fark.
+    let realized = 0;
+    for (const e of payments) {
+      const pr = curRateAt(snaps[e.date], a.cur);
+      if (!pr) continue;
+      realized += e.try - (e.try / pr) * thenRate;
+    }
     results.push({
       key: a.key, chip: a.chip, name: a.name, q: a.fmt(units), units,
       thenRate,
       rateLabel: a.rateFmt(thenRate),       // borcun verildiği tarihteki kur
       thenTL: units * thenRate,
       nowTL: units * a.todayRate,
+      realized,
       manual: !!mo
     });
   }
@@ -2761,11 +2807,31 @@ function fxRowsHtml(results, kind) {
     </div>`;
   }).join('');
 }
+// Kalan / gerçekleşen / toplam kâr-zarar özeti (yabancı para hesabında)
+function kzSummaryHtml(r, kind) {
+  if (!r || Math.abs(r.realized || 0) < 1) return '';
+  const kalan = r.nowTL - r.thenTL;
+  const gerc = r.realized;
+  const toplam = kalan + gerc;
+  const line = (label, v, cls) => {
+    const up = v > 0;
+    return `<div class="kz-row ${cls || ''}"><span>${label}</span><span class="${up ? 'up' : 'dn'}">${up ? '+' : '−'}${fmtTL(Math.abs(v))}</span></div>`;
+  };
+  const gercLabel = kind === 'debt' ? 'Gerçekleşen (ödeme)' : 'Gerçekleşen (tahsilat)';
+  return `<div class="kz-box">
+    <div class="kz-title">Kur farkı kâr / zarar · ${escapeHtml(r.name.toLowerCase())} bazında</div>
+    ${line('Kalan (açık) üzerinden', kalan)}
+    ${line(gercLabel, gerc)}
+    ${line('Toplam', toplam, 'kz-total')}
+  </div>`;
+}
 
 async function renderEquivalents(c) {
   const t = contactTotals(c);
   const el = document.getElementById('aEquiv');
   const foot = document.getElementById('aEquivFoot');
+  document.getElementById('aKz').innerHTML = '';
+  document.getElementById('aKzF').innerHTML = '';
 
   if (t.balance <= 0.01) {
     el.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Bakiye sıfır</div>`;
@@ -2790,6 +2856,9 @@ async function renderEquivalents(c) {
     // Döviz cinsinden alacaksa: kalan tutarı bugünkü kurdan göster
     const nc = contactNativeCur(c);
     const nr = nc ? results.find(x => x.key === curKey(nc)) : null;
+    const kz = nr ? kzSummaryHtml(nr, 'recv') : '';
+    document.getElementById('aKz').innerHTML = kz;
+    document.getElementById('aKzF').innerHTML = kz;
     if (nr) {
       document.getElementById('aBalance').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
       document.getElementById('aBreak').innerHTML = `<span>${nr.q} kalan</span><br><span style="color:var(--muted);">bugünkü kurdan</span>`;
@@ -3368,6 +3437,8 @@ async function renderDebtEquiv(d) {
   const el = document.getElementById('dEquiv');
   const foot = document.getElementById('dEquivFoot');
   const remaining = debtTotals(d).remaining;
+  document.getElementById('dKz').innerHTML = '';
+  document.getElementById('dKzF').innerHTML = '';
 
   if (remaining <= 0.01) {
     el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">Borç kapandı — açık kur farkı yok.</div>`;
@@ -3391,6 +3462,9 @@ async function renderDebtEquiv(d) {
     el.querySelectorAll('.fxrow').forEach(r => r.addEventListener('click', () => openFxEditor('debt', d.id, r.dataset.fxkey)));
     // Döviz cinsinden borçsa: kalan borcu bugünkü kurdan göster
     const nr = isForeign(d) ? results.find(x => x.key === curKey(d.cur)) : null;
+    const kz = nr ? kzSummaryHtml(nr, 'debt') : '';
+    document.getElementById('dKz').innerHTML = kz;
+    document.getElementById('dKzF').innerHTML = kz;
     if (nr) {
       document.getElementById('dDetailRemaining').textContent = Number(nr.nowTL).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
       foot.textContent = `Kalan ${nr.q} ≈ ${fmtTL(nr.nowTL)} (bugünkü kur) · değiştirmek için satıra dokun`;
