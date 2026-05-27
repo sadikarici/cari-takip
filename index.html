@@ -2004,10 +2004,25 @@
           <label class="field-label">Aylık tutar (₺) *</label>
           <input type="number" class="field-input" id="sAmount" placeholder="0" inputmode="decimal" step="0.01">
         </div>
-        <div class="field">
+        <div class="field" id="sDayField">
           <label class="field-label">Ayın kaçında? *</label>
           <input type="number" class="field-input" id="sDay" placeholder="1" inputmode="numeric" step="1" min="1" max="31">
         </div>
+        <div class="field" id="sCountField" style="display:none;">
+          <label class="field-label">Taksit sayısı *</label>
+          <input type="number" class="field-input" id="sCount" placeholder="12" inputmode="numeric" step="1" min="1">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Süre</label>
+        <div class="seg" id="sTermSeg">
+          <button type="button" class="seg-btn active" data-term="open">Süresiz</button>
+          <button type="button" class="seg-btn" data-term="fixed">Süreli (taksitli)</button>
+        </div>
+      </div>
+      <div class="field" id="sStartField" style="display:none;">
+        <label class="field-label">İlk ödeme tarihi *</label>
+        <input type="date" class="field-input" id="sStart">
       </div>
       <div class="field">
         <label class="field-label">Kategori</label>
@@ -3352,13 +3367,47 @@ function nextBillingDate(day) {
   if (dt < t) dt = mk(t.getFullYear(), t.getMonth() + 1);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 }
+function monthKeyAdd(ym, n) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function subStartMonth(s) { return (s.startDate || todayISO()).slice(0, 7); }
+function subEndMonth(s) { return s.term > 0 ? monthKeyAdd(subStartMonth(s), s.term - 1) : null; }
+// Belirli bir ay (YYYY-MM) bu abonelikten ücret alır mı?
+function subChargesInMonth(s, m) {
+  if (s.active === false) return false;
+  if (!(s.term > 0)) return true;               // süresiz
+  return m >= subStartMonth(s) && m <= subEndMonth(s);
+}
+// Hâlâ devam ediyor mu (tamamlanmadı / iptal değil)?
+function subOngoing(s) {
+  if (s.active === false) return false;
+  if (!(s.term > 0)) return true;
+  return todayISO().slice(0, 7) <= subEndMonth(s);
+}
+function subCompleted(s) { return s.active !== false && s.term > 0 && todayISO().slice(0, 7) > subEndMonth(s); }
+// Sonraki ödeme tarihi (süreli bittiyse null)
+function subNextDate(s) {
+  if (!(s.term > 0)) return nextBillingDate(s.day || 1);
+  const start = s.startDate || todayISO();
+  const today = todayISO();
+  for (let i = 0; i < s.term; i++) { const d = addMonths(start, i); if (d >= today) return d; }
+  return null;
+}
 function renderSubs() {
   const subs = store.subs || [];
-  const active = subs.filter(s => s.active !== false);
-  const monthly = active.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  const todayM = todayISO().slice(0, 7);
+  const ongoing = subs.filter(subOngoing);
+  const monthly = subs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? (Number(s.amount) || 0) : 0), 0);
+  let yearly = 0;
+  for (let i = 0; i < 12; i++) {
+    const m = monthKeyAdd(todayM, i);
+    subs.forEach(s => { if (subChargesInMonth(s, m)) yearly += Number(s.amount) || 0; });
+  }
   document.getElementById('subMonthly').textContent = fmtTL(monthly);
-  document.getElementById('subYearly').textContent = fmtTL(monthly * 12);
-  document.getElementById('mtSub').textContent = active.length;
+  document.getElementById('subYearly').textContent = fmtTL(yearly);
+  document.getElementById('mtSub').textContent = ongoing.length;
   document.getElementById('subSectionCount').textContent = subs.length + ' kayıt';
   const list = document.getElementById('subList');
   if (!subs.length) {
@@ -3366,19 +3415,28 @@ function renderSubs() {
     return;
   }
   const sorted = [...subs].sort((a, b) => {
-    const aa = a.active !== false, ba = b.active !== false;
+    const aa = subOngoing(a), ba = subOngoing(b);
     if (aa !== ba) return aa ? -1 : 1;
-    return nextBillingDate(a.day).localeCompare(nextBillingDate(b.day));
+    return (subNextDate(a) || '9999').localeCompare(subNextDate(b) || '9999');
   });
   list.innerHTML = sorted.map(s => {
-    const inactive = s.active === false;
+    const cancelled = s.active === false;
+    const done = subCompleted(s);
+    const dim = cancelled || done;
     const cat = catLabel(s.category);
     const firma = s.company ? `${escapeHtml(s.company)}<span class="dot">·</span>` : '';
     const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
-    const meta = inactive
-      ? `${firma}${cat}<span class="dot">·</span>iptal`
-      : `${firma}${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}${chan}`;
-    return `<div class="contact ${inactive ? 'settled' : ''}" data-sid="${s.id}">
+    const nb = subNextDate(s);
+    let core;
+    if (cancelled) core = 'iptal';
+    else if (s.term > 0) {
+      const range = `${s.term} ay taksit`;
+      core = done ? `${range}<span class="dot">·</span>tamamlandı` : `${range}<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+    } else {
+      core = `her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+    }
+    const meta = `${firma}${cat}<span class="dot">·</span>${core}${chan}`;
+    return `<div class="contact ${dim ? 'settled' : ''}" data-sid="${s.id}">
       <div class="cat-chip personal">${initials(s.name)}</div>
       <div class="contact-main">
         <div class="contact-name">${escapeHtml(s.name)}</div>
@@ -3386,7 +3444,7 @@ function renderSubs() {
       </div>
       <div class="contact-amount">
         <div class="main">${fmtTL(s.amount)}</div>
-        <div class="sub">aylık</div>
+        <div class="sub">${s.term > 0 ? 'aylık · taksit' : 'aylık'}</div>
       </div>
     </div>`;
   }).join('');
@@ -3400,6 +3458,10 @@ function openSubForm(id) {
   document.getElementById('sCompany').value = s && s.company ? s.company : '';
   document.getElementById('sAmount').value = s && s.amount != null ? s.amount : '';
   document.getElementById('sDay').value = s && s.day != null ? s.day : '1';
+  const fixed = !!(s && s.term > 0);
+  document.getElementById('sCount').value = fixed ? s.term : '';
+  document.getElementById('sStart').value = fixed && s.startDate ? s.startDate : todayISO();
+  setSubTerm(fixed ? 'fixed' : 'open');
   document.getElementById('sCategory').innerHTML = buildCatOptions(s ? s.category : '');
   document.getElementById('sNote').value = s && s.note ? s.note : '';
   setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
@@ -3412,6 +3474,14 @@ function openSubForm(id) {
   setTimeout(() => document.getElementById('sName').focus(), 250);
 }
 function closeSubForm() { scrimSub.classList.remove('open'); editingSubId = null; }
+function setSubTerm(mode) {
+  const fixed = mode === 'fixed';
+  document.querySelectorAll('#sTermSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.term === mode));
+  document.getElementById('sDayField').style.display = fixed ? 'none' : '';
+  document.getElementById('sCountField').style.display = fixed ? '' : 'none';
+  document.getElementById('sStartField').style.display = fixed ? '' : 'none';
+}
+document.querySelectorAll('#sTermSeg .seg-btn').forEach(b => b.addEventListener('click', () => setSubTerm(b.dataset.term)));
 document.getElementById('subClose').addEventListener('click', closeSubForm);
 document.getElementById('subCancel').addEventListener('click', closeSubForm);
 scrimSub.addEventListener('click', e => { if (e.target === scrimSub) closeSubForm(); });
@@ -3424,16 +3494,27 @@ document.getElementById('subSave').addEventListener('click', () => {
   const note = document.getElementById('sNote').value.trim();
   if (!name) { toast('Ad gerekli', 'error'); return; }
   if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
-  if (!day || day < 1) day = 1;
-  if (day > 31) day = 31;
+  const fixed = !!document.querySelector('#sTermSeg .seg-btn.active[data-term="fixed"]');
+  let term = 0, startDate = null;
+  if (fixed) {
+    term = parseInt(document.getElementById('sCount').value, 10);
+    startDate = document.getElementById('sStart').value;
+    if (!term || term < 1) { toast('Taksit sayısı gerekli', 'error'); return; }
+    if (!startDate) { toast('İlk ödeme tarihi gerekli', 'error'); return; }
+    day = Number(startDate.slice(8, 10));
+  } else {
+    if (!day || day < 1) day = 1;
+    if (day > 31) day = 31;
+  }
   const m = getMethod('sub');
   const inPlan = !!document.querySelector('#subPlanSeg .seg-btn.active[data-plan="yes"]');
+  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', inPlan };
   if (editingSubId) {
     const s = store.subs.find(x => x.id === editingSubId);
-    if (s) { s.name = name; s.company = company; s.amount = amount; s.day = day; s.category = category; s.note = note; s.method = m.method; s.bank = m.bank || ''; s.inPlan = inPlan; }
+    if (s) Object.assign(s, fields);
     toast('Güncellendi', 'success');
   } else {
-    store.subs.push({ id: uid(), name, company, amount, day, category, note, method: m.method, bank: m.bank || '', inPlan, active: true, createdAt: Date.now() });
+    store.subs.push({ id: uid(), active: true, createdAt: Date.now(), ...fields });
     toast('Abonelik eklendi', 'success');
   }
   persist(); renderSubs(); renderMonthPlan(); closeSubForm();
@@ -3473,7 +3554,7 @@ function renderMonthPlan() {
       if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d) });
     }
   });
-  const activeSubs = (store.subs || []).filter(s => s.active !== false && s.inPlan && (Number(s.amount) || 0) > 0);
+  const activeSubs = (store.subs || []).filter(s => s.active !== false && s.inPlan && (Number(s.amount) || 0) > 0 && (!(s.term > 0) || subEndMonth(s) >= todayISO().slice(0, 7)));
   if (!items.length && !activeSubs.length) { host.innerHTML = ''; return; }
 
   const buckets = {};
@@ -3497,7 +3578,7 @@ function renderMonthPlan() {
   // Bir ayın tüm kalemleri: o aydaki borç ödemeleri + aktif abonelikler
   const monthItems = m => {
     const list = buckets[m] ? buckets[m].items.slice() : [];
-    activeSubs.forEach(s => list.push({ date: billingDate(m, s.day || 1), amount: Number(s.amount) || 0, name: s.name, sub: true }));
+    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: Number(s.amount) || 0, name: s.name, sub: true }); });
     return list;
   };
   const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
