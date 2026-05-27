@@ -3363,14 +3363,14 @@ document.getElementById('subSave').addEventListener('click', () => {
     store.subs.push({ id: uid(), name, amount, day, category, note, active: true, createdAt: Date.now() });
     toast('Abonelik eklendi', 'success');
   }
-  persist(); renderSubs(); closeSubForm();
+  persist(); renderSubs(); renderMonthPlan(); closeSubForm();
 });
 document.getElementById('subDelete').addEventListener('click', () => {
   if (!editingSubId) return;
   const s = store.subs.find(x => x.id === editingSubId);
   if (s && confirm(`"${s.name}" aboneliği silinsin mi?`)) {
     store.subs = store.subs.filter(x => x.id !== editingSubId);
-    persist(); renderSubs(); closeSubForm();
+    persist(); renderSubs(); renderMonthPlan(); closeSubForm();
     toast('Silindi', 'success');
   }
 });
@@ -3379,7 +3379,7 @@ document.getElementById('subToggle').addEventListener('click', () => {
   const s = store.subs.find(x => x.id === editingSubId);
   if (!s) return;
   s.active = s.active === false;
-  persist(); renderSubs(); closeSubForm();
+  persist(); renderSubs(); renderMonthPlan(); closeSubForm();
   toast(s.active === false ? 'İptal edildi' : 'Aktifleştirildi', 'success');
 });
 
@@ -3400,7 +3400,9 @@ function renderMonthPlan() {
       if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d) });
     }
   });
-  if (!items.length) { host.innerHTML = ''; return; }
+  const activeSubs = (store.subs || []).filter(s => s.active !== false && (Number(s.amount) || 0) > 0);
+  if (!items.length && !activeSubs.length) { host.innerHTML = ''; return; }
+
   const buckets = {};
   items.forEach(it => {
     const m = it.date.slice(0, 7);
@@ -3409,26 +3411,49 @@ function renderMonthPlan() {
     buckets[m].items.push(it);
   });
   const todayM = todayISO().slice(0, 7);
-  const allMonths = Object.keys(buckets).sort();
-  const overdueMonths = allMonths.filter(m => m < todayM);
-  const futureMonths = allMonths.filter(m => m >= todayM);
-  const overdueTotal = overdueMonths.reduce((s, m) => s + buckets[m].total, 0);
-  const overdueItems = overdueMonths.flatMap(m => buckets[m].items);
+  const addMonthsKey = (ym, n) => {
+    const [y, mo] = ym.split('-').map(Number);
+    const d = new Date(y, mo - 1 + n, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const billingDate = (ym, day) => {
+    const [y, mo] = ym.split('-').map(Number);
+    const last = new Date(y, mo, 0).getDate();
+    return `${ym}-${String(Math.min(day, last)).padStart(2, '0')}`;
+  };
+  // Bir ayın tüm kalemleri: o aydaki borç ödemeleri + aktif abonelikler
+  const monthItems = m => {
+    const list = buckets[m] ? buckets[m].items.slice() : [];
+    activeSubs.forEach(s => list.push({ date: billingDate(m, s.day || 1), amount: Number(s.amount) || 0, name: s.name, sub: true }));
+    return list;
+  };
+  const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
+
+  // Gösterilecek aylar: yaklaşan 3 takvim ayı ∪ ileri tarihli borç ayları
+  const debtFuture = Object.keys(buckets).filter(m => m >= todayM);
+  const next3 = [0, 1, 2].map(i => addMonthsKey(todayM, i));
+  const futureMonths = [...new Set([...debtFuture, ...next3])].sort();
   const showMonths = futureMonths.slice(0, 3);
   const more = futureMonths.length - showMonths.length;
+
+  // Gecikmiş: yalnızca geçmiş borç ödemeleri (abonelikler hariç)
+  const overdueMonths = Object.keys(buckets).filter(m => m < todayM);
+  const overdueTotal = overdueMonths.reduce((s, m) => s + buckets[m].total, 0);
+  const overdueItems = overdueMonths.flatMap(m => buckets[m].items);
+
   const monthLabel = m => {
     let s = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long' });
     if (m.slice(0, 4) !== todayM.slice(0, 4)) s += " '" + m.slice(2, 4);
     return s;
   };
   const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it =>
-    `<div class="mp-item"><span>${escapeHtml(it.name)} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
+    `<div class="mp-item"><span>${escapeHtml(it.name)}${it.sub ? ' · abonelik' : ''} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
 
   let html = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>`;
   if (overdueTotal > 0.01) html += `<div class="mp-overdue" data-key="ov"><span>⚠ Gecikmiş ödemeler</span><strong>${fmtTL(overdueTotal)}</strong></div>`;
   if (showMonths.length) {
     html += `<div class="mp-grid">` + showMonths.map(m =>
-      `<div class="mp-tile" data-key="${m}"><div class="mp-tile-month">${monthLabel(m)}</div><div class="mp-tile-total">${fmtTL(buckets[m].total)}</div></div>`).join('') + `</div>`;
+      `<div class="mp-tile" data-key="${m}"><div class="mp-tile-month">${monthLabel(m)}</div><div class="mp-tile-total">${fmtTL(monthTotal(m))}</div></div>`).join('') + `</div>`;
   }
   if (more > 0) html += `<div class="mp-more">+${more} ay daha</div>`;
   html += `<div class="mp-detail" id="mpDetail"></div></div>`;
@@ -3444,7 +3469,7 @@ function renderMonthPlan() {
     detail.innerHTML = `<div class="mp-detail-head">${label} dökümü</div>` + itemsHtml(its);
   }
   host.querySelectorAll('.mp-tile').forEach(t =>
-    t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), buckets[t.dataset.key].items, t)));
+    t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), monthItems(t.dataset.key), t)));
   const ov = host.querySelector('.mp-overdue');
   if (ov) ov.addEventListener('click', () => pick('ov', 'Gecikmiş', overdueItems, ov));
 }
