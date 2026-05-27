@@ -2412,7 +2412,7 @@ function persistSubcats() { localStorage.setItem(SUBCAT_KEY, JSON.stringify(subc
 const SUBCAT_LEGACY = { dijital: 'Dijital / üyelik', fatura: 'Fatura', spor: 'Spor', diger: 'Diğer' };
 function catLabel(c) { return SUBCAT_LEGACY[c] || c || 'Diğer'; }
 function buildCatOptions(selected) {
-  const sel = catLabel(selected);
+  const sel = selected ? catLabel(selected) : '';   // boş seçimde varsayılan kategori dayatma
   let html = subcats.map(c => `<option value="${escapeHtml(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
   if (sel && !subcats.includes(sel)) html = `<option value="${escapeHtml(sel)}" selected>${escapeHtml(sel)}</option>` + html;
   html += `<option value="__manage__">＋ Kategori ekle / düzenle…</option>`;
