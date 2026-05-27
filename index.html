@@ -1167,8 +1167,8 @@
     cursor: pointer;
   }
   .dtab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
-  .fxrow { cursor: pointer; }
-  .fxrow:active { background: var(--paper-2); }
+  .fxrow, .faizrow { cursor: pointer; }
+  .fxrow:active, .faizrow:active { background: var(--paper-2); }
   .delta-total { color: var(--ochre) !important; font-weight: 600; }
   .kz-sub {
     display: flex;
@@ -1182,6 +1182,24 @@
   }
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
+  .per-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .per-row:last-child { border-bottom: none; }
+  .per-l { min-width: 0; }
+  .per-range { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); }
+  .per-calc { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .per-int { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; white-space: nowrap; }
+  .per-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair-2);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--ink);
+  }
   .kz-box {
     margin: 8px 0 2px;
     border: 1px solid var(--hair-2);
@@ -1876,6 +1894,26 @@
   </div>
 </div>
 
+<!-- ============ FAİZ DÖNEM DETAYI SHEET ============ -->
+<div class="scrim" id="scrimFaiz">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="faizDetailTitle">Faiz</div>
+        <div class="sheet-sub">Dönem dönem işleyen faiz · bilgi amaçlı</div>
+      </div>
+      <button class="sheet-close" id="faizDetailClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div id="faizDetailBody"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-primary" id="faizDetailDone">Kapat</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2285,17 +2323,18 @@ function debtReductions(d) {
 // Olay tabanlı işlemiş faiz: events=[{date, delta}] delta>0 ana para, <0 ödeme
 function accruedInterestEvents(events, periods) {
   const today = todayISO();
-  if (!periods || !periods.length || !events.length) return { interest: 0, days: 0, rates: [] };
+  if (!periods || !periods.length || !events.length) return { interest: 0, days: 0, rates: [], breakdown: [] };
   let start = events[0].date;
   events.forEach(e => { if (e.date < start) start = e.date; });
   const totalDays = Math.max(0, dayDiff(start, today));
-  if (totalDays <= 0) return { interest: 0, days: totalDays, rates: [] };
+  if (totalDays <= 0) return { interest: 0, days: totalDays, rates: [], breakdown: [] };
   const pts = new Set([start, today]);
   events.forEach(e => { if (e.date > start && e.date < today) pts.add(e.date); });
   periods.forEach(p => { if (p.from > start && p.from < today) pts.add(p.from); });
   const sorted = [...pts].sort();
   let interest = 0;
   const used = new Set();
+  const breakdown = [];
   for (let i = 0; i < sorted.length - 1; i++) {
     const d0 = sorted[i], d1 = sorted[i + 1];
     const days = dayDiff(d0, d1);
@@ -2304,10 +2343,13 @@ function accruedInterestEvents(events, periods) {
     events.forEach(e => { if (e.date <= d0) bal += e.delta; });
     bal = Math.max(0, bal);
     if (bal <= 0) continue;
-    used.add(rateAt(periods, d0));
-    interest += bal * (rateAt(periods, d0) / 100) * (days / 365);
+    const rate = rateAt(periods, d0);
+    used.add(rate);
+    const periodInterest = bal * (rate / 100) * (days / 365);
+    interest += periodInterest;
+    breakdown.push({ from: d0, to: d1, days, balance: bal, rate, interest: periodInterest });
   }
-  return { interest, days: totalDays, rates: [...used] };
+  return { interest, days: totalDays, rates: [...used], breakdown };
 }
 function debtInterestEvents(d) {
   const events = [{ date: debtStartDate(d), delta: debtTotals(d).total }];
@@ -2638,13 +2680,14 @@ function renderContactFaiz(c) {
   const balance = contactTotals(c).balance;
   const yasal = accruedInterestEvents(events, faizRates.yasal);
   const avans = accruedInterestEvents(events, faizRates.avans);
-  const row = (name, res, periods) => `<div class="equiv-line">
+  const row = (name, res, periods, type) => `<div class="equiv-line faizrow" data-faiz="${type}">
       <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
       <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık</div></div>
       <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">alacak+faiz ${fmtTL(balance + res.interest)}</div></div>
     </div>`;
-  el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal) + row('Avans faizi', avans, faizRates.avans);
-  foot.innerHTML = `${yasal.days} gün · basit faiz, tahsilat oldukça bakiye düşer · <strong>bilgi amaçlı, resmi değildir</strong>`;
+  el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal, 'yasal') + row('Avans faizi', avans, faizRates.avans, 'avans');
+  el.querySelectorAll('.faizrow').forEach(r => r.addEventListener('click', () => openFaizDetail('contact', r.dataset.faiz)));
+  foot.innerHTML = `${yasal.days} gün · basit faiz, tahsilat oldukça bakiye düşer · dönem detayı için satıra dokun · <strong>bilgi amaçlı</strong>`;
 }
 
 function renderAccount(c) {
@@ -3420,13 +3463,14 @@ function renderDebtFaiz(d) {
   const total = debtTotals(d).total;
   const yasal = accruedInterest(d, faizRates.yasal);
   const avans = accruedInterest(d, faizRates.avans);
-  const row = (name, res, periods) => `<div class="equiv-line">
+  const row = (name, res, periods, type) => `<div class="equiv-line faizrow" data-faiz="${type}">
       <div class="equiv-asset"><div class="asset-chip" style="background:var(--ochre);">%</div>${name}</div>
       <div class="equiv-val"><div class="q" style="font-size:14px;">${currentRateLabel(periods)}</div><div class="r">yıllık</div></div>
       <div class="equiv-val"><div class="q">${fmtTL(res.interest)}</div><div class="r">borç+faiz ${fmtTL(total + res.interest)}</div></div>
     </div>`;
-  el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal) + row('Avans faizi', avans, faizRates.avans);
-  foot.innerHTML = `${fmtDateShort(start)} → bugün (${yasal.days} gün) · basit faiz, ödeme oldukça bakiye düşer · <strong>bilgi amaçlı, resmi değildir</strong>`;
+  el.innerHTML = row('Yasal faiz', yasal, faizRates.yasal, 'yasal') + row('Avans faizi', avans, faizRates.avans, 'avans');
+  el.querySelectorAll('.faizrow').forEach(r => r.addEventListener('click', () => openFaizDetail('debt', r.dataset.faiz)));
+  foot.innerHTML = `${fmtDateShort(start)} → bugün (${yasal.days} gün) · basit faiz · dönem detayı için satıra dokun · <strong>bilgi amaçlı</strong>`;
 }
 
 function renderDebtPayments(d) {
@@ -3717,6 +3761,43 @@ document.getElementById('fxClear').addEventListener('click', () => {
   closeFx();
   toast('Otomatiğe dönüldü', 'success');
 });
+
+// ============ FAİZ DÖNEM DETAYI ============
+const scrimFaiz = document.getElementById('scrimFaiz');
+function openFaizDetail(scope, type) {
+  const periods = faizRates[type];
+  let events;
+  if (scope === 'debt') {
+    const d = store.debts.find(x => x.id === currentDebtId);
+    if (!d) return;
+    events = debtInterestEvents(d);
+  } else {
+    const c = store.contacts.find(x => x.id === currentContactId);
+    if (!c) return;
+    events = contactInterestEvents(c);
+  }
+  const res = accruedInterestEvents(events, periods);
+  document.getElementById('faizDetailTitle').textContent = (type === 'yasal' ? 'Yasal faiz' : 'Avans faizi') + ' · dönemsel';
+  const body = document.getElementById('faizDetailBody');
+  if (!res.breakdown.length) {
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">İşlemiş faiz yok.</div>`;
+  } else {
+    body.innerHTML = res.breakdown.map(b => `
+      <div class="per-row">
+        <div class="per-l">
+          <div class="per-range">${fmtDateShort(b.from)} → ${fmtDateShort(b.to)} · ${b.days} gün</div>
+          <div class="per-calc">${fmtTL(b.balance)} × %${fmtNum(b.rate, 2)} yıllık</div>
+        </div>
+        <div class="per-int">${fmtTL(b.interest)}</div>
+      </div>`).join('')
+      + `<div class="per-total"><span>Toplam işlemiş faiz</span><span>${fmtTL(res.interest)}</span></div>`;
+  }
+  scrimFaiz.classList.add('open');
+}
+function closeFaizDetail() { scrimFaiz.classList.remove('open'); }
+document.getElementById('faizDetailClose').addEventListener('click', closeFaizDetail);
+document.getElementById('faizDetailDone').addEventListener('click', closeFaizDetail);
+scrimFaiz.addEventListener('click', e => { if (e.target === scrimFaiz) closeFaizDetail(); });
 
 document.getElementById('dRefresh').addEventListener('click', async () => {
   localStorage.removeItem(RATES_KEY);
