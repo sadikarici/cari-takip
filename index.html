@@ -1605,12 +1605,6 @@
             <input type="number" class="field-input" id="dTotal" placeholder="0" inputmode="decimal" step="0.01">
           </div>
           <div class="field">
-            <label class="field-label">Vade tarihi (opsiyonel)</label>
-            <input type="date" class="field-input" id="dDueDate">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
             <label class="field-label">Para birimi</label>
             <select class="field-input" id="dCur">
               <option value="TRY">₺ Türk Lirası</option>
@@ -1619,20 +1613,24 @@
               <option value="GOLD">Altın (gram)</option>
             </select>
           </div>
-          <div class="field" id="dTryField" style="display:none;">
-            <label class="field-label">TL karşılığı (₺) *</label>
-            <input type="number" class="field-input" id="dTotalTry" placeholder="0" inputmode="decimal" step="0.01">
-          </div>
+        </div>
+        <div class="field" id="dTryField" style="display:none;">
+          <label class="field-label">TL karşılığı (₺) *</label>
+          <input type="number" class="field-input" id="dTotalTry" placeholder="0" inputmode="decimal" step="0.01">
         </div>
       </div>
-      <div class="field-row">
-        <div class="field">
+      <div style="display:flex;gap:10px;">
+        <div class="field" style="flex:1;min-width:0;">
           <label class="field-label">Borcun alındığı tarih *</label>
           <input type="date" class="field-input" id="dStartDate">
         </div>
-        <div class="field" id="dFirstDateField">
+        <div class="field" id="dFirstDateField" style="flex:1;min-width:0;">
           <label class="field-label">İlk taksit tarihi *</label>
           <input type="date" class="field-input" id="dFirstDate">
+        </div>
+        <div class="field" id="dDueField" style="flex:1;min-width:0;display:none;">
+          <label class="field-label">Vade tarihi (ops.)</label>
+          <input type="date" class="field-input" id="dDueDate">
         </div>
       </div>
       <div class="field">
@@ -3274,6 +3272,7 @@ function setDebtPlan(p) {
   document.getElementById('dInstFields').style.display = p === 'installment' ? '' : 'none';
   document.getElementById('dFlatFields').style.display = p === 'flat' ? '' : 'none';
   document.getElementById('dFirstDateField').style.display = p === 'installment' ? '' : 'none';
+  document.getElementById('dDueField').style.display = p === 'flat' ? '' : 'none';
   updateDebtHint();
 }
 // Kredi'de tek seferlik seçeneği gösterilmez (yalnızca taksitli)
