@@ -1569,7 +1569,10 @@
       </div>
       <div class="field">
         <label class="field-label" id="dTitleLabel">Kuruluş / kredi adı *</label>
-        <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off">
+        <div style="display:flex;gap:10px;">
+          <select class="field-input" id="dLoanBank" style="display:none;flex:1;min-width:0;"></select>
+          <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off" style="flex:1;min-width:0;">
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Ödeme şekli</label>
@@ -1629,7 +1632,7 @@
         <label class="field-label">Açıklama (opsiyonel)</label>
         <input type="text" class="field-input" id="dNote" placeholder="Detay" autocomplete="off">
       </div>
-      <div class="field">
+      <div class="field" id="dMethodField">
         <label class="field-label">Borç nasıl alındı?</label>
         <div class="seg" id="dMethodSeg">
           <button type="button" class="seg-btn active" data-method="nakit">Nakit</button>
@@ -3246,9 +3249,14 @@ function updateDebtTitleLabel() {
   const cat = document.getElementById('dCategory').value;
   const lbl = document.getElementById('dTitleLabel');
   const inp = document.getElementById('dTitle');
+  const isLoan = cat === 'loan';
+  // Kredi: banka solda + kredi adı sağda; nakit/banka seçimi yok (hep banka)
+  document.getElementById('dLoanBank').style.display = isLoan ? '' : 'none';
+  document.getElementById('dMethodField').style.display = isLoan ? 'none' : '';
+  if (isLoan) document.getElementById('dBankField').style.display = 'none';
   if (cat === 'personal') { lbl.textContent = 'Kişi adı *'; inp.placeholder = 'Örn: Ali Veli'; }
   else if (cat === 'card') { lbl.textContent = 'Banka / kart adı *'; inp.placeholder = 'Örn: Bonus Kredi Kartı'; }
-  else { lbl.textContent = 'Kuruluş / kredi adı *'; inp.placeholder = 'Örn: Garanti İhtiyaç Kredisi'; }
+  else { lbl.textContent = 'Banka · kredi adı *'; inp.placeholder = 'Örn: İhtiyaç kredisi'; }
 }
 
 function setDebtPlan(p) {
@@ -3312,6 +3320,7 @@ function openDebtForm(id) {
   document.getElementById('dNote').value = d && d.note ? d.note : '';
   dCurF.set(d ? d.cur : 'TRY', d && d.total != null ? d.total : '', d ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
+  document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && d.category === 'loan' ? (d.bank || '') : '');
   setDebtPlan(d ? (d.plan || 'installment') : 'installment');
   updatePlanOptions(d ? d.category : 'loan');
   updateDebtTitleLabel();
@@ -3325,6 +3334,9 @@ document.getElementById('dCategory').addEventListener('change', function() {
   updateDebtTitleLabel();
   if (!editingDebtId) setDebtPlan(this.value === 'personal' ? 'flat' : 'installment');
   updatePlanOptions(this.value);
+});
+document.getElementById('dLoanBank').addEventListener('change', function() {
+  if (this.value === '__manage__') openBanks();
 });
 document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => {
   b.addEventListener('click', () => setDebtPlan(b.dataset.plan));
@@ -3369,7 +3381,13 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
   let snapshot = null;
   try { snapshot = await getHistoricalRates(startDate); } catch(e) {}
 
-  const m = getMethod('d');
+  let m;
+  if (category === 'loan') {
+    const lb = document.getElementById('dLoanBank').value;
+    m = { method: 'banka', bank: (lb && lb !== '__manage__') ? lb : '' };
+  } else {
+    m = getMethod('d');
+  }
 
   if (editingDebtId) {
     const d = store.debts.find(x => x.id === editingDebtId);
@@ -3700,6 +3718,8 @@ function closeBanks() {
     const s = document.getElementById(p + 'Bank');
     if (s) s.innerHTML = buildBankOptions(s.value === '__manage__' ? '' : s.value);
   });
+  const lb = document.getElementById('dLoanBank');
+  if (lb) lb.innerHTML = buildBankOptions(lb.value === '__manage__' ? '' : lb.value);
 }
 document.getElementById('addBankBtn').addEventListener('click', addBank);
 document.getElementById('newBankName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addBank(); } });
