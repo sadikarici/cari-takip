@@ -3231,7 +3231,7 @@ function renderDebts() {
           ? (d.dueDate ? `son ödeme ${fmtDateShort(d.dueDate)}` : '—')
           : (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz'))
       : `${t.paidCount}/${d.count} taksit`;
-    const displayName = d.category === 'card' && d.bank ? `${d.bank} - ${d.title}` : d.title;
+    const displayName = (d.category === 'card' || d.category === 'loan') && d.bank ? `${d.bank} - ${d.title}` : d.title;
 
     return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
       <div class="cat-chip ${d.category}">${chip}</div>
