@@ -1183,17 +1183,20 @@
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
   /* Aylık ödeme planı */
-  .mp-box { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 4px 14px 8px; margin-bottom: 20px; }
-  .mp-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 11px 0 7px; }
-  .mp-row { border-top: 1px solid var(--hair); }
-  .mp-head { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; cursor: pointer; gap: 12px; }
-  .mp-month { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: var(--ink); text-transform: capitalize; }
-  .mp-row.past .mp-month { color: var(--red); }
-  .mp-total { font-family: 'IBM Plex Serif', serif; font-size: 16px; font-weight: 500; white-space: nowrap; }
-  .mp-row.past .mp-total { color: var(--red); }
-  .mp-items { display: none; padding: 0 0 8px; }
-  .mp-row.open .mp-items { display: block; }
-  .mp-item { display: flex; justify-content: space-between; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); padding: 3px 0; }
+  .mp-box { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 13px 14px; margin-bottom: 20px; }
+  .mp-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 11px; }
+  .mp-overdue { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--red-bg); color: var(--red); border-radius: var(--r-md); padding: 9px 11px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+  .mp-overdue strong { font-family: 'IBM Plex Serif', serif; font-size: 14px; }
+  .mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mp-tile { border: 1px solid var(--hair-2); border-radius: var(--r-md); padding: 11px 6px; text-align: center; cursor: pointer; background: var(--paper); }
+  .mp-tile.active { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .mp-tile-month { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .mp-tile-total { font-family: 'IBM Plex Serif', serif; font-size: 14px; font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mp-more { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--faint); text-align: center; margin-top: 9px; }
+  .mp-detail { margin-top: 12px; }
+  .mp-detail:empty { display: none; }
+  .mp-detail-head { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 2px; }
+  .mp-item { display: flex; justify-content: space-between; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-2); padding: 5px 0; border-top: 1px solid var(--hair); }
   .per-row {
     display: flex;
     justify-content: space-between;
@@ -3220,19 +3223,44 @@ function renderMonthPlan() {
     buckets[m].items.push(it);
   });
   const todayM = todayISO().slice(0, 7);
-  const rows = Object.keys(buckets).sort().map(m => {
-    const b = buckets[m];
-    const past = m < todayM;
-    const label = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-    const its = b.items.sort((a, b) => a.date.localeCompare(b.date)).map(it =>
-      `<div class="mp-item"><span>${escapeHtml(it.name)} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
-    return `<div class="mp-row ${past ? 'past' : ''}">
-      <div class="mp-head"><div class="mp-month">${label}${past ? ' · gecikmiş' : ''}</div><div class="mp-total">${fmtTL(b.total)}</div></div>
-      <div class="mp-items">${its}</div>
-    </div>`;
-  }).join('');
-  host.innerHTML = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>${rows}</div>`;
-  host.querySelectorAll('.mp-head').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
+  const allMonths = Object.keys(buckets).sort();
+  const overdueMonths = allMonths.filter(m => m < todayM);
+  const futureMonths = allMonths.filter(m => m >= todayM);
+  const overdueTotal = overdueMonths.reduce((s, m) => s + buckets[m].total, 0);
+  const overdueItems = overdueMonths.flatMap(m => buckets[m].items);
+  const showMonths = futureMonths.slice(0, 3);
+  const more = futureMonths.length - showMonths.length;
+  const monthLabel = m => {
+    let s = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long' });
+    if (m.slice(0, 4) !== todayM.slice(0, 4)) s += " '" + m.slice(2, 4);
+    return s;
+  };
+  const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it =>
+    `<div class="mp-item"><span>${escapeHtml(it.name)} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
+
+  let html = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>`;
+  if (overdueTotal > 0.01) html += `<div class="mp-overdue" data-key="ov"><span>⚠ Gecikmiş ödemeler</span><strong>${fmtTL(overdueTotal)}</strong></div>`;
+  if (showMonths.length) {
+    html += `<div class="mp-grid">` + showMonths.map(m =>
+      `<div class="mp-tile" data-key="${m}"><div class="mp-tile-month">${monthLabel(m)}</div><div class="mp-tile-total">${fmtTL(buckets[m].total)}</div></div>`).join('') + `</div>`;
+  }
+  if (more > 0) html += `<div class="mp-more">+${more} ay daha</div>`;
+  html += `<div class="mp-detail" id="mpDetail"></div></div>`;
+  host.innerHTML = html;
+
+  const detail = document.getElementById('mpDetail');
+  let sel = '';
+  function pick(key, label, its, el) {
+    host.querySelectorAll('.mp-tile, .mp-overdue').forEach(x => x.classList.remove('active'));
+    if (sel === key) { sel = ''; detail.innerHTML = ''; return; }
+    sel = key;
+    if (el && el.classList.contains('mp-tile')) el.classList.add('active');
+    detail.innerHTML = `<div class="mp-detail-head">${label} dökümü</div>` + itemsHtml(its);
+  }
+  host.querySelectorAll('.mp-tile').forEach(t =>
+    t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), buckets[t.dataset.key].items, t)));
+  const ov = host.querySelector('.mp-overdue');
+  if (ov) ov.addEventListener('click', () => pick('ov', 'Gecikmiş', overdueItems, ov));
 }
 
 function renderDebts() {
