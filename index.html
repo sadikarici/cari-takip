@@ -1002,11 +1002,11 @@
   }
   .modetab {
     flex: 1;
-    padding: 13px 12px;
+    padding: 13px 6px;
     background: none;
     border: none;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
@@ -1014,6 +1014,7 @@
     margin-bottom: -1px;
     letter-spacing: -0.01em;
     transition: color 0.15s;
+    white-space: nowrap;
   }
   .modetab.active { color: var(--ink); border-bottom-color: var(--ink); }
   .modetab .cnt {
@@ -1182,6 +1183,12 @@
   }
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
+  /* Abonelik özeti */
+  .sub-summary { display: flex; gap: 10px; margin-bottom: 20px; }
+  .sub-sum-card { flex: 1; background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 14px; }
+  .sub-sum-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .sub-sum-val { font-family: 'IBM Plex Serif', serif; font-size: 22px; font-weight: 500; margin-top: 5px; }
+
   /* Aylık ödeme planı */
   .mp-box { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 13px 14px; margin-bottom: 20px; }
   .mp-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 11px; }
@@ -1310,6 +1317,7 @@
   <div class="modetabs">
     <button class="modetab active" data-mode="receivables">Alacaklarım<span class="cnt" id="mtRecv">0</span></button>
     <button class="modetab" data-mode="debts">Borçlarım<span class="cnt" id="mtDebt">0</span></button>
+    <button class="modetab" data-mode="subs">Abonelikler<span class="cnt" id="mtSub">0</span></button>
   </div>
 
   <!-- VIEW: RECEIVABLES (alacaklar) -->
@@ -1341,6 +1349,25 @@
       <button class="filter" data-dfilter="all">Hepsi<span id="dCntAll">0</span></button>
     </div>
     <div class="contact-list" id="debtList"></div>
+  </div>
+
+  <!-- VIEW: SUBSCRIPTIONS (abonelikler) -->
+  <div id="viewSubs" style="display:none;">
+    <div class="sub-summary">
+      <div class="sub-sum-card">
+        <div class="sub-sum-label">Aylık toplam</div>
+        <div class="sub-sum-val" id="subMonthly">₺0</div>
+      </div>
+      <div class="sub-sum-card">
+        <div class="sub-sum-label">Yıllık</div>
+        <div class="sub-sum-val" id="subYearly">₺0</div>
+      </div>
+    </div>
+    <div class="section-head">
+      <div class="section-title">Abonelik <em>kayıtları</em></div>
+      <div class="section-count" id="subSectionCount">0 kayıt</div>
+    </div>
+    <div class="contact-list" id="subList"></div>
   </div>
 
   <div class="foot">· · ·</div>
@@ -1950,6 +1977,55 @@
   </div>
 </div>
 
+<!-- ============ ABONELİK FORM SHEET ============ -->
+<div class="scrim" id="scrimSub">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="subFormTitle">Yeni <em>abonelik</em></div>
+        <div class="sheet-sub">Her ay otomatik işler</div>
+      </div>
+      <button class="sheet-close" id="subClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <label class="field-label">Abonelik adı *</label>
+        <input type="text" class="field-input" id="sName" placeholder="Örn: Netflix, Spor salonu" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Aylık tutar (₺) *</label>
+          <input type="number" class="field-input" id="sAmount" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="field">
+          <label class="field-label">Ayın kaçında? *</label>
+          <input type="number" class="field-input" id="sDay" placeholder="1" inputmode="numeric" step="1" min="1" max="31">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Kategori</label>
+        <select class="field-input" id="sCategory">
+          <option value="dijital">Dijital / üyelik</option>
+          <option value="fatura">Fatura</option>
+          <option value="spor">Spor</option>
+          <option value="diger">Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">Not (opsiyonel)</label>
+        <input type="text" class="field-input" id="sNote" placeholder="Detay" autocomplete="off">
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="subDelete" style="display:none;">Sil</button>
+      <button class="btn btn-ghost" id="subToggle" style="display:none;">İptal et</button>
+      <button class="btn btn-ghost" id="subCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="subSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1981,6 +2057,7 @@ let editingContactId = null;
 let currentContactId = null;
 let editingDebtId = null;
 let currentDebtId = null;
+let editingSubId = null;
 let txMode = null; // 'debt' | 'payment' | {edit: txId}
 let todayRates = null;
 let hintTimer = null;
@@ -1992,6 +2069,7 @@ function load() {
   } catch(e) { store = { contacts: [] }; }
   if (!store.contacts) store.contacts = [];
   if (!store.debts) store.debts = [];
+  if (!store.subs) store.subs = [];
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
     if (d.plan === 'installment' && !d.paidIdx) d.paidIdx = [];
@@ -2658,6 +2736,7 @@ function closeContactForm() { scrimContact.classList.remove('open'); editingCont
 
 document.getElementById('fabAdd').addEventListener('click', () => {
   if (mode === 'debts') openDebtForm();
+  else if (mode === 'subs') openSubForm();
   else openContactForm();
 });
 document.getElementById('contactCancel').addEventListener('click', closeContactForm);
@@ -3188,14 +3267,121 @@ function setMode(m) {
   mode = m;
   document.getElementById('viewReceivables').style.display = m === 'receivables' ? '' : 'none';
   document.getElementById('viewDebts').style.display = m === 'debts' ? '' : 'none';
+  document.getElementById('viewSubs').style.display = m === 'subs' ? '' : 'none';
   document.querySelectorAll('.modetab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
-  document.getElementById('fabLabel').textContent = m === 'receivables' ? 'Yeni cari hesap' : 'Yeni borç';
+  document.getElementById('fabLabel').textContent = m === 'receivables' ? 'Yeni cari hesap' : m === 'debts' ? 'Yeni borç' : 'Yeni abonelik';
 }
 document.querySelectorAll('.modetab').forEach(t => {
   t.addEventListener('click', () => setMode(t.dataset.mode));
 });
 
-function refresh() { renderSummary(); render(); renderDebts(); }
+function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); }
+
+// ============ SUBSCRIPTIONS (abonelikler) ============
+const scrimSub = document.getElementById('scrimSub');
+const SUB_CATS = { dijital: 'Dijital / üyelik', fatura: 'Fatura', spor: 'Spor', diger: 'Diğer' };
+function nextBillingDate(day) {
+  const t = new Date(todayISO() + 'T00:00:00');
+  const mk = (y, mo) => { const last = new Date(y, mo + 1, 0).getDate(); return new Date(y, mo, Math.min(day, last)); };
+  let dt = mk(t.getFullYear(), t.getMonth());
+  if (dt < t) dt = mk(t.getFullYear(), t.getMonth() + 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+function renderSubs() {
+  const subs = store.subs || [];
+  const active = subs.filter(s => s.active !== false);
+  const monthly = active.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  document.getElementById('subMonthly').textContent = fmtTL(monthly);
+  document.getElementById('subYearly').textContent = fmtTL(monthly * 12);
+  document.getElementById('mtSub').textContent = active.length;
+  document.getElementById('subSectionCount').textContent = subs.length + ' kayıt';
+  const list = document.getElementById('subList');
+  if (!subs.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-mark">∅</div><div class="empty-title">Boş</div><div class="empty-sub">Henüz abonelik yok.<br>Aşağıdaki butondan ekle; her ay otomatik işler.</div></div>`;
+    return;
+  }
+  const sorted = [...subs].sort((a, b) => {
+    const aa = a.active !== false, ba = b.active !== false;
+    if (aa !== ba) return aa ? -1 : 1;
+    return nextBillingDate(a.day).localeCompare(nextBillingDate(b.day));
+  });
+  list.innerHTML = sorted.map(s => {
+    const inactive = s.active === false;
+    const cat = SUB_CATS[s.category] || 'Diğer';
+    const meta = inactive
+      ? `${cat}<span class="dot">·</span>iptal`
+      : `${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}`;
+    return `<div class="contact ${inactive ? 'settled' : ''}" data-sid="${s.id}">
+      <div class="cat-chip personal">${initials(s.name)}</div>
+      <div class="contact-main">
+        <div class="contact-name">${escapeHtml(s.name)}</div>
+        <div class="contact-meta">${meta}</div>
+      </div>
+      <div class="contact-amount">
+        <div class="main">${fmtTL(s.amount)}</div>
+        <div class="sub">aylık</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.contact').forEach(el => el.addEventListener('click', () => openSubForm(el.dataset.sid)));
+}
+function openSubForm(id) {
+  editingSubId = id || null;
+  const s = id ? (store.subs || []).find(x => x.id === id) : null;
+  document.getElementById('subFormTitle').innerHTML = s ? 'Aboneliği <em>düzenle</em>' : 'Yeni <em>abonelik</em>';
+  document.getElementById('sName').value = s ? s.name : '';
+  document.getElementById('sAmount').value = s && s.amount != null ? s.amount : '';
+  document.getElementById('sDay').value = s && s.day != null ? s.day : '1';
+  document.getElementById('sCategory').value = s ? (s.category || 'dijital') : 'dijital';
+  document.getElementById('sNote').value = s && s.note ? s.note : '';
+  document.getElementById('subDelete').style.display = s ? '' : 'none';
+  const tog = document.getElementById('subToggle');
+  if (s) { tog.style.display = ''; tog.textContent = s.active === false ? 'Aktifleştir' : 'İptal et'; }
+  else tog.style.display = 'none';
+  scrimSub.classList.add('open');
+  setTimeout(() => document.getElementById('sName').focus(), 250);
+}
+function closeSubForm() { scrimSub.classList.remove('open'); editingSubId = null; }
+document.getElementById('subClose').addEventListener('click', closeSubForm);
+document.getElementById('subCancel').addEventListener('click', closeSubForm);
+scrimSub.addEventListener('click', e => { if (e.target === scrimSub) closeSubForm(); });
+document.getElementById('subSave').addEventListener('click', () => {
+  const name = document.getElementById('sName').value.trim();
+  const amount = parseFloat(document.getElementById('sAmount').value);
+  let day = parseInt(document.getElementById('sDay').value, 10);
+  const category = document.getElementById('sCategory').value;
+  const note = document.getElementById('sNote').value.trim();
+  if (!name) { toast('Ad gerekli', 'error'); return; }
+  if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
+  if (!day || day < 1) day = 1;
+  if (day > 31) day = 31;
+  if (editingSubId) {
+    const s = store.subs.find(x => x.id === editingSubId);
+    if (s) { s.name = name; s.amount = amount; s.day = day; s.category = category; s.note = note; }
+    toast('Güncellendi', 'success');
+  } else {
+    store.subs.push({ id: uid(), name, amount, day, category, note, active: true, createdAt: Date.now() });
+    toast('Abonelik eklendi', 'success');
+  }
+  persist(); renderSubs(); closeSubForm();
+});
+document.getElementById('subDelete').addEventListener('click', () => {
+  if (!editingSubId) return;
+  const s = store.subs.find(x => x.id === editingSubId);
+  if (s && confirm(`"${s.name}" aboneliği silinsin mi?`)) {
+    store.subs = store.subs.filter(x => x.id !== editingSubId);
+    persist(); renderSubs(); closeSubForm();
+    toast('Silindi', 'success');
+  }
+});
+document.getElementById('subToggle').addEventListener('click', () => {
+  if (!editingSubId) return;
+  const s = store.subs.find(x => x.id === editingSubId);
+  if (!s) return;
+  s.active = s.active === false;
+  persist(); renderSubs(); closeSubForm();
+  toast(s.active === false ? 'İptal edildi' : 'Aktifleştirildi', 'success');
+});
 
 // ============ RENDER: DEBT LIST ============
 function debtName(d) {
