@@ -1989,9 +1989,15 @@
       <button class="sheet-close" id="subClose" aria-label="Kapat"></button>
     </div>
     <div class="sheet-body">
-      <div class="field">
-        <label class="field-label">Abonelik adı *</label>
-        <input type="text" class="field-input" id="sName" placeholder="Örn: Netflix, Spor salonu" autocomplete="off">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Abonelik adı *</label>
+          <input type="text" class="field-input" id="sName" placeholder="Örn: Aile paketi" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="field-label">Firma</label>
+          <input type="text" class="field-input" id="sCompany" placeholder="Örn: Netflix" autocomplete="off">
+        </div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -3367,10 +3373,11 @@ function renderSubs() {
   list.innerHTML = sorted.map(s => {
     const inactive = s.active === false;
     const cat = catLabel(s.category);
+    const firma = s.company ? `${escapeHtml(s.company)}<span class="dot">·</span>` : '';
     const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
     const meta = inactive
-      ? `${cat}<span class="dot">·</span>iptal`
-      : `${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}${chan}`;
+      ? `${firma}${cat}<span class="dot">·</span>iptal`
+      : `${firma}${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}${chan}`;
     return `<div class="contact ${inactive ? 'settled' : ''}" data-sid="${s.id}">
       <div class="cat-chip personal">${initials(s.name)}</div>
       <div class="contact-main">
@@ -3390,6 +3397,7 @@ function openSubForm(id) {
   const s = id ? (store.subs || []).find(x => x.id === id) : null;
   document.getElementById('subFormTitle').innerHTML = s ? 'Aboneliği <em>düzenle</em>' : 'Yeni <em>abonelik</em>';
   document.getElementById('sName').value = s ? s.name : '';
+  document.getElementById('sCompany').value = s && s.company ? s.company : '';
   document.getElementById('sAmount').value = s && s.amount != null ? s.amount : '';
   document.getElementById('sDay').value = s && s.day != null ? s.day : '1';
   document.getElementById('sCategory').innerHTML = buildCatOptions(s ? s.category : '');
@@ -3409,6 +3417,7 @@ document.getElementById('subCancel').addEventListener('click', closeSubForm);
 scrimSub.addEventListener('click', e => { if (e.target === scrimSub) closeSubForm(); });
 document.getElementById('subSave').addEventListener('click', () => {
   const name = document.getElementById('sName').value.trim();
+  const company = document.getElementById('sCompany').value.trim();
   const amount = parseFloat(document.getElementById('sAmount').value);
   let day = parseInt(document.getElementById('sDay').value, 10);
   const category = document.getElementById('sCategory').value;
@@ -3421,10 +3430,10 @@ document.getElementById('subSave').addEventListener('click', () => {
   const inPlan = !!document.querySelector('#subPlanSeg .seg-btn.active[data-plan="yes"]');
   if (editingSubId) {
     const s = store.subs.find(x => x.id === editingSubId);
-    if (s) { s.name = name; s.amount = amount; s.day = day; s.category = category; s.note = note; s.method = m.method; s.bank = m.bank || ''; s.inPlan = inPlan; }
+    if (s) { s.name = name; s.company = company; s.amount = amount; s.day = day; s.category = category; s.note = note; s.method = m.method; s.bank = m.bank || ''; s.inPlan = inPlan; }
     toast('Güncellendi', 'success');
   } else {
-    store.subs.push({ id: uid(), name, amount, day, category, note, method: m.method, bank: m.bank || '', inPlan, active: true, createdAt: Date.now() });
+    store.subs.push({ id: uid(), name, company, amount, day, category, note, method: m.method, bank: m.bank || '', inPlan, active: true, createdAt: Date.now() });
     toast('Abonelik eklendi', 'success');
   }
   persist(); renderSubs(); renderMonthPlan(); closeSubForm();
