@@ -3258,6 +3258,16 @@ function setDebtPlan(p) {
   document.getElementById('dFlatFields').style.display = p === 'flat' ? '' : 'none';
   updateDebtHint();
 }
+// Kredi'de tek seferlik seçeneği gösterilmez (yalnızca taksitli)
+function updatePlanOptions(category) {
+  const flatBtn = document.querySelector('#dPlanSeg .seg-btn[data-plan="flat"]');
+  if (category === 'loan') {
+    flatBtn.style.display = 'none';
+    if (dPlan === 'flat') setDebtPlan('installment');
+  } else {
+    flatBtn.style.display = '';
+  }
+}
 
 function updateDebtHint() {
   const box = document.getElementById('dHint');
@@ -3303,6 +3313,7 @@ function openDebtForm(id) {
   dCurF.set(d ? d.cur : 'TRY', d && d.total != null ? d.total : '', d ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
   setDebtPlan(d ? (d.plan || 'installment') : 'installment');
+  updatePlanOptions(d ? d.category : 'loan');
   updateDebtTitleLabel();
   updateDebtHint();
   scrimDebtForm.classList.add('open');
@@ -3313,6 +3324,7 @@ function closeDebtForm() { scrimDebtForm.classList.remove('open'); editingDebtId
 document.getElementById('dCategory').addEventListener('change', function() {
   updateDebtTitleLabel();
   if (!editingDebtId) setDebtPlan(this.value === 'personal' ? 'flat' : 'installment');
+  updatePlanOptions(this.value);
 });
 document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => {
   b.addEventListener('click', () => setDebtPlan(b.dataset.plan));
