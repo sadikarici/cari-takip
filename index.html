@@ -2005,12 +2005,7 @@
       </div>
       <div class="field">
         <label class="field-label">Kategori</label>
-        <select class="field-input" id="sCategory">
-          <option value="dijital">Dijital / üyelik</option>
-          <option value="fatura">Fatura</option>
-          <option value="spor">Spor</option>
-          <option value="diger">Diğer</option>
-        </select>
+        <select class="field-input" id="sCategory"></select>
       </div>
       <div class="field">
         <label class="field-label">Not (opsiyonel)</label>
@@ -2040,6 +2035,33 @@
       <button class="btn btn-ghost" id="subToggle" style="display:none;">İptal et</button>
       <button class="btn btn-ghost" id="subCancel">Vazgeç</button>
       <button class="btn btn-primary" id="subSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ABONELİK KATEGORİLERİ SHEET ============ -->
+<div class="scrim" id="scrimCats">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Kategoriler</div>
+        <div class="sheet-sub">Abonelik kategorileri</div>
+      </div>
+      <button class="sheet-close" id="catsClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row" style="align-items:flex-end;">
+        <div class="field" style="flex:1;">
+          <label class="field-label">Yeni kategori</label>
+          <input type="text" class="field-input" id="newCatName" placeholder="Kategori adı" autocomplete="off">
+        </div>
+        <button type="button" class="btn btn-primary" id="addCatBtn" style="white-space:nowrap;">Ekle</button>
+      </div>
+      <div id="catList" style="margin-top:14px;"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-primary" id="catsDone">Tamam</button>
     </div>
   </div>
 </div>
@@ -2353,6 +2375,26 @@ function buildBankOptions(selected) {
   let html = banks.map(b => `<option value="${escapeHtml(b)}"${b === selected ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
   if (selected && !banks.includes(selected)) html = `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>` + html;
   html += `<option value="__manage__">＋ Banka ekle / düzenle…</option>`;
+  return html;
+}
+
+// ---- Abonelik kategorileri ----
+const SUBCAT_KEY = 'cari_abonelik_kategorileri_v1';
+const SUBCAT_DEFAULT = ['Dijital / üyelik', 'Fatura', 'Spor', 'Diğer'];
+let subcats = [];
+function loadSubcats() {
+  try { const a = JSON.parse(localStorage.getItem(SUBCAT_KEY)); if (Array.isArray(a) && a.length) { subcats = a; return; } } catch(e){}
+  subcats = [...SUBCAT_DEFAULT];
+}
+function persistSubcats() { localStorage.setItem(SUBCAT_KEY, JSON.stringify(subcats)); }
+// Eski anahtar tabanlı kategorileri etikete çevir
+const SUBCAT_LEGACY = { dijital: 'Dijital / üyelik', fatura: 'Fatura', spor: 'Spor', diger: 'Diğer' };
+function catLabel(c) { return SUBCAT_LEGACY[c] || c || 'Diğer'; }
+function buildCatOptions(selected) {
+  const sel = catLabel(selected);
+  let html = subcats.map(c => `<option value="${escapeHtml(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  if (sel && !subcats.includes(sel)) html = `<option value="${escapeHtml(sel)}" selected>${escapeHtml(sel)}</option>` + html;
+  html += `<option value="__manage__">＋ Kategori ekle / düzenle…</option>`;
   return html;
 }
 // Bir formun yöntem alanını (prefix) verilen değerlerle doldurur
@@ -3297,7 +3339,6 @@ function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); }
 
 // ============ SUBSCRIPTIONS (abonelikler) ============
 const scrimSub = document.getElementById('scrimSub');
-const SUB_CATS = { dijital: 'Dijital / üyelik', fatura: 'Fatura', spor: 'Spor', diger: 'Diğer' };
 function nextBillingDate(day) {
   const t = new Date(todayISO() + 'T00:00:00');
   const mk = (y, mo) => { const last = new Date(y, mo + 1, 0).getDate(); return new Date(y, mo, Math.min(day, last)); };
@@ -3325,7 +3366,7 @@ function renderSubs() {
   });
   list.innerHTML = sorted.map(s => {
     const inactive = s.active === false;
-    const cat = SUB_CATS[s.category] || 'Diğer';
+    const cat = catLabel(s.category);
     const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
     const meta = inactive
       ? `${cat}<span class="dot">·</span>iptal`
@@ -3351,7 +3392,7 @@ function openSubForm(id) {
   document.getElementById('sName').value = s ? s.name : '';
   document.getElementById('sAmount').value = s && s.amount != null ? s.amount : '';
   document.getElementById('sDay').value = s && s.day != null ? s.day : '1';
-  document.getElementById('sCategory').value = s ? (s.category || 'dijital') : 'dijital';
+  document.getElementById('sCategory').innerHTML = buildCatOptions(s ? s.category : '');
   document.getElementById('sNote').value = s && s.note ? s.note : '';
   setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
   document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.plan === ((s && s.inPlan) ? 'yes' : 'no')));
@@ -4117,6 +4158,41 @@ document.getElementById('banksClose').addEventListener('click', closeBanks);
 document.getElementById('banksDone').addEventListener('click', closeBanks);
 scrimBanks.addEventListener('click', e => { if (e.target === scrimBanks) closeBanks(); });
 
+// ============ ABONELİK KATEGORİ EDİTÖRÜ ============
+const scrimCats = document.getElementById('scrimCats');
+function renderCatList() {
+  const host = document.getElementById('catList');
+  host.innerHTML = subcats.length
+    ? subcats.map((c, i) => `<div class="bank-row"><span>${escapeHtml(c)}</span><button type="button" class="rr-del" data-idx="${i}" style="width:32px;">×</button></div>`).join('')
+    : `<div style="font-size:11px;color:var(--faint);font-family:'IBM Plex Mono',monospace;">Kategori yok. Yukarıdan ekleyin.</div>`;
+  host.querySelectorAll('.rr-del').forEach(btn => btn.addEventListener('click', () => {
+    subcats.splice(parseInt(btn.dataset.idx, 10), 1);
+    persistSubcats();
+    renderCatList();
+  }));
+}
+function addCat() {
+  const inp = document.getElementById('newCatName');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (!subcats.some(c => c.toLowerCase() === name.toLowerCase())) { subcats.push(name); persistSubcats(); }
+  inp.value = '';
+  renderCatList();
+  inp.focus();
+}
+function openCats() { renderCatList(); scrimCats.classList.add('open'); }
+function closeCats() {
+  scrimCats.classList.remove('open');
+  const s = document.getElementById('sCategory');
+  if (s) s.innerHTML = buildCatOptions(s.value === '__manage__' ? '' : s.value);
+}
+document.getElementById('addCatBtn').addEventListener('click', addCat);
+document.getElementById('newCatName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCat(); } });
+document.getElementById('catsClose').addEventListener('click', closeCats);
+document.getElementById('catsDone').addEventListener('click', closeCats);
+scrimCats.addEventListener('click', e => { if (e.target === scrimCats) closeCats(); });
+document.getElementById('sCategory').addEventListener('change', function() { if (this.value === '__manage__') openCats(); });
+
 // ============ VERİLDİĞİNDE DEĞERLERİ (manuel override) ============
 const scrimFx = document.getElementById('scrimFx');
 function fxEntity() {
@@ -4312,6 +4388,7 @@ document.getElementById('dSettleBtn').addEventListener('click', () => {
 load();
 loadFaizRates();
 loadBanks();
+loadSubcats();
 ['tx', 'd', 'dp', 'sub'].forEach(initMethodField);
 document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('#subPlanSeg .seg-btn').forEach(x => x.classList.toggle('active', x === b));
