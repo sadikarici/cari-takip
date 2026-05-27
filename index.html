@@ -3262,7 +3262,7 @@ function updateDebtTitleLabel() {
   // Kredi & Kredi Kartı: banka seçimi ad satırında, nakit/banka seçimi yok (hep banka)
   const wrap = document.getElementById('dLoanBankWrap');
   wrap.style.display = bankMode ? '' : 'none';
-  wrap.style.order = isCard ? '1' : '';   // kartta banka sağda, kredide solda
+  wrap.style.order = '';   // banka solda, ad sağda
   document.getElementById('dMethodField').style.display = bankMode ? 'none' : '';
   if (bankMode) document.getElementById('dBankField').style.display = 'none';
   if (cat === 'personal') { lbl.textContent = 'Kişi adı *'; inp.placeholder = 'Örn: Ali Veli'; }
