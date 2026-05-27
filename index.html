@@ -1592,10 +1592,6 @@
             <input type="number" class="field-input" id="dCount" placeholder="12" inputmode="numeric" step="1" min="1">
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">İlk taksit tarihi *</label>
-          <input type="date" class="field-input" id="dFirstDate">
-        </div>
       </div>
       <div id="dFlatFields" style="display:none;">
         <div class="field-row">
@@ -1624,9 +1620,15 @@
           </div>
         </div>
       </div>
-      <div class="field">
-        <label class="field-label">Borcun alındığı tarih *</label>
-        <input type="date" class="field-input" id="dStartDate">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Borcun alındığı tarih *</label>
+          <input type="date" class="field-input" id="dStartDate">
+        </div>
+        <div class="field" id="dFirstDateField">
+          <label class="field-label">İlk taksit tarihi *</label>
+          <input type="date" class="field-input" id="dFirstDate">
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Açıklama (opsiyonel)</label>
@@ -3264,6 +3266,7 @@ function setDebtPlan(p) {
   document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.plan === p));
   document.getElementById('dInstFields').style.display = p === 'installment' ? '' : 'none';
   document.getElementById('dFlatFields').style.display = p === 'flat' ? '' : 'none';
+  document.getElementById('dFirstDateField').style.display = p === 'installment' ? '' : 'none';
   updateDebtHint();
 }
 // Kredi'de tek seferlik seçeneği gösterilmez (yalnızca taksitli)
