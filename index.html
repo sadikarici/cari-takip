@@ -1579,7 +1579,7 @@
           </div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="dPlanField">
         <label class="field-label">Ödeme şekli</label>
         <div class="seg" id="dPlanSeg">
           <button type="button" class="seg-btn active" data-plan="installment">Taksitli</button>
@@ -1619,6 +1619,18 @@
           <input type="number" class="field-input" id="dTotalTry" placeholder="0" inputmode="decimal" step="0.01">
         </div>
       </div>
+      <div id="dCardFields" style="display:none;">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Borç tutarı (₺) *</label>
+            <input type="number" class="field-input" id="dCardDebt" placeholder="0" inputmode="decimal" step="0.01">
+          </div>
+          <div class="field">
+            <label class="field-label">Kart limiti (₺)</label>
+            <input type="number" class="field-input" id="dCardLimit" placeholder="0" inputmode="decimal" step="0.01">
+          </div>
+        </div>
+      </div>
       <div class="field-row">
         <div class="field">
           <label class="field-label">Borcun alındığı tarih *</label>
@@ -1629,7 +1641,7 @@
           <input type="date" class="field-input" id="dFirstDate">
         </div>
         <div class="field" id="dDueField" style="display:none;">
-          <label class="field-label">Vade tarihi (ops.)</label>
+          <label class="field-label" id="dDueLabel">Vade tarihi (ops.)</label>
           <input type="date" class="field-input" id="dDueDate">
         </div>
       </div>
@@ -3289,10 +3301,42 @@ function updatePlanOptions(category) {
     flatBtn.style.display = '';
   }
 }
+// Kredi Kartı: taksitli/tek seferlik yok; borç tutarı + limit + son ödeme tarihi
+function applyDebtCategory(cat, resetPlan) {
+  const isCard = cat === 'card';
+  document.getElementById('dPlanField').style.display = isCard ? 'none' : '';
+  document.getElementById('dCardFields').style.display = isCard ? '' : 'none';
+  document.getElementById('dDueLabel').textContent = isCard ? 'Son ödeme tarihi' : 'Vade tarihi (ops.)';
+  if (isCard) {
+    dPlan = 'flat';
+    document.getElementById('dInstFields').style.display = 'none';
+    document.getElementById('dFlatFields').style.display = 'none';
+    document.getElementById('dFirstDateField').style.display = 'none';
+    document.getElementById('dDueField').style.display = '';
+    updateDebtHint();
+  } else {
+    if (resetPlan) setDebtPlan(cat === 'personal' ? 'flat' : 'installment');
+    else setDebtPlan(dPlan);
+    updatePlanOptions(cat);
+  }
+}
 
 function updateDebtHint() {
   const box = document.getElementById('dHint');
   const body = document.getElementById('dHintBody');
+  if (document.getElementById('dCategory').value === 'card') {
+    const total = parseFloat(document.getElementById('dCardDebt').value);
+    const limit = parseFloat(document.getElementById('dCardLimit').value);
+    const due = document.getElementById('dDueDate').value;
+    if (!total || total <= 0) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    body.className = 'hint-grid';
+    body.innerHTML = `
+      <div class="hint-cell"><div class="sym">BORÇ</div><div class="val">${fmtTL(total)}</div></div>
+      <div class="hint-cell"><div class="sym">LİMİT</div><div class="val">${!isNaN(limit) ? fmtTL(limit) : '—'}</div></div>
+      <div class="hint-cell"><div class="sym">SON ÖDEME</div><div class="val" style="font-size:12px;">${due ? fmtDateShort(due) : '—'}</div></div>`;
+    return;
+  }
   if (dPlan === 'flat') {
     const cf = dCurF ? dCurF.get() : { cur: 'TRY', amount: parseFloat(document.getElementById('dTotal').value) };
     const total = cf.amount;
@@ -3331,12 +3375,15 @@ function openDebtForm(id) {
   document.getElementById('dDueDate').value = d && d.dueDate ? d.dueDate : '';
   document.getElementById('dStartDate').value = d ? debtStartDate(d) : todayISO();
   document.getElementById('dNote').value = d && d.note ? d.note : '';
-  dCurF.set(d ? d.cur : 'TRY', d && d.total != null ? d.total : '', d ? d.totalTry : null);
+  const isCardD = d && d.category === 'card';
+  document.getElementById('dCardDebt').value = isCardD && d.total != null ? d.total : '';
+  document.getElementById('dCardLimit').value = d && d.limit != null ? d.limit : '';
+  dCurF.set(d && !isCardD ? d.cur : 'TRY', d && !isCardD && d.total != null ? d.total : '', d && !isCardD ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
   document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && (d.category === 'loan' || d.category === 'card') ? (d.bank || '') : '');
-  setDebtPlan(d ? (d.plan || 'installment') : 'installment');
-  updatePlanOptions(d ? d.category : 'loan');
+  dPlan = d ? (d.plan || 'installment') : 'installment';
   updateDebtTitleLabel();
+  applyDebtCategory(d ? d.category : 'loan', !d);
   updateDebtHint();
   scrimDebtForm.classList.add('open');
   setTimeout(() => document.getElementById('dTitle').focus(), 250);
@@ -3345,8 +3392,7 @@ function closeDebtForm() { scrimDebtForm.classList.remove('open'); editingDebtId
 
 document.getElementById('dCategory').addEventListener('change', function() {
   updateDebtTitleLabel();
-  if (!editingDebtId) setDebtPlan(this.value === 'personal' ? 'flat' : 'installment');
-  updatePlanOptions(this.value);
+  applyDebtCategory(this.value, !editingDebtId);
 });
 document.getElementById('dLoanBank').addEventListener('change', function() {
   if (this.value === '__manage__') openBanks();
@@ -3354,7 +3400,7 @@ document.getElementById('dLoanBank').addEventListener('change', function() {
 document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => {
   b.addEventListener('click', () => setDebtPlan(b.dataset.plan));
 });
-['dAmount', 'dCount', 'dFirstDate', 'dTotal', 'dDueDate'].forEach(idv => {
+['dAmount', 'dCount', 'dFirstDate', 'dTotal', 'dDueDate', 'dCardDebt', 'dCardLimit'].forEach(idv => {
   const elx = document.getElementById(idv);
   elx.addEventListener('input', updateDebtHint);
   elx.addEventListener('change', updateDebtHint);
@@ -3373,13 +3419,19 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
   if (!startDate) { toast('Borç tarihi gerekli', 'error'); return; }
 
   let fields;
-  if (dPlan === 'flat') {
+  if (category === 'card') {
+    const total = parseFloat(document.getElementById('dCardDebt').value);
+    const limit = parseFloat(document.getElementById('dCardLimit').value);
+    const dueDate = document.getElementById('dDueDate').value;
+    if (!total || total <= 0) { toast('Borç tutarı girin', 'error'); return; }
+    fields = { plan: 'flat', total, dueDate, cur: 'TRY', totalTry: total, limit: isNaN(limit) ? undefined : limit };
+  } else if (dPlan === 'flat') {
     const cf = dCurF.get();
     const total = cf.amount;
     const dueDate = document.getElementById('dDueDate').value;
     if (!total || total <= 0) { toast('Geçerli tutar girin', 'error'); return; }
     if (cf.cur !== 'TRY' && (cf.try == null || cf.try <= 0)) { toast('TL karşılığını girin', 'error'); return; }
-    fields = { plan: 'flat', total, dueDate, cur: cf.cur, totalTry: cf.cur === 'TRY' ? total : cf.try };
+    fields = { plan: 'flat', total, dueDate, cur: cf.cur, totalTry: cf.cur === 'TRY' ? total : cf.try, limit: undefined };
   } else {
     const amount = parseFloat(document.getElementById('dAmount').value);
     const count = parseInt(document.getElementById('dCount').value, 10);
@@ -3411,10 +3463,11 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     if (fields.plan === 'installment') {
       d.plan = 'installment'; d.amount = fields.amount; d.count = fields.count; d.firstDate = fields.firstDate;
       d.paidIdx = planChanged ? [] : (d.paidIdx || []).filter(i => i < fields.count);
-      delete d.total; delete d.dueDate; delete d.payments; delete d.cur; delete d.totalTry;
+      delete d.total; delete d.dueDate; delete d.payments; delete d.cur; delete d.totalTry; delete d.limit;
     } else {
       d.plan = 'flat'; d.total = fields.total; d.dueDate = fields.dueDate;
       d.cur = fields.cur; d.totalTry = fields.totalTry;
+      if (fields.limit != null) d.limit = fields.limit; else delete d.limit;
       if (planChanged || !d.payments) d.payments = [];
       delete d.amount; delete d.count; delete d.firstDate; delete d.paidIdx;
     }
@@ -3469,6 +3522,9 @@ function renderDebtDetail(d) {
   if (t.paid > 0) breakBits.push(`<span class="dn">−${fmtTL(t.paid)} ödendi</span>`);
   const od = debtOverdueAmount(d);
   if (od > 0) breakBits.push(`<span class="up">${fmtTL(od)} gecikmiş</span>`);
+  if (d.category === 'card' && d.limit != null) {
+    breakBits.push(`<span>limit ${fmtTL(d.limit)} · uygun ${fmtTL(Math.max(0, d.limit - t.remaining))}</span>`);
+  }
   document.getElementById('dDetailBreak').innerHTML = breakBits.join('<br>');
 
   const noteEl = document.getElementById('dDetailNote');
@@ -3485,7 +3541,8 @@ function renderDebtDetail(d) {
     planTitle.textContent = 'Ödemeler';
     payActions.style.display = '';
     document.getElementById('dDetailProgress').textContent = `${fmtTL(t.paid)} / ${fmtTL(t.total)}`;
-    foot.textContent = d.dueDate ? ('Vade: ' + fmtDate(d.dueDate)) : 'Vadesiz borç.';
+    const dueWord = d.category === 'card' ? 'Son ödeme' : 'Vade';
+    foot.textContent = d.dueDate ? (dueWord + ': ' + fmtDate(d.dueDate)) : (d.category === 'card' ? '—' : 'Vadesiz borç.');
     renderDebtPayments(d);
   } else {
     planTitle.textContent = 'Taksit planı';
