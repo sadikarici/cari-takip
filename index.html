@@ -1183,8 +1183,7 @@
   }
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
-  /* Abonelik gerçek tutar satırı */
-  .act-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; align-items: center; margin-bottom: 6px; }
+  /* Abonelik gerçek tutar satırı */  .act-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; align-items: center; margin-bottom: 6px; }
   .act-row span { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-2); text-transform: capitalize; }
   .act-row .field-input { padding: 8px 10px; font-size: 13px; text-align: right; }
 
@@ -1193,6 +1192,12 @@
   .sub-sum-card { flex: 1; background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 14px; }
   .sub-sum-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .sub-sum-val { font-family: 'IBM Plex Serif', serif; font-size: 22px; font-weight: 500; margin-top: 5px; }
+
+  /* Alacaklar alt sekmeleri */
+  .atabs { display: flex; border-bottom: 1px solid var(--hair); margin-bottom: 16px; }
+  .atab { flex: 1; padding: 12px 8px; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .atab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .atab .cnt { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 400; color: var(--faint); margin-left: 5px; }
 
   /* Aylık ödeme planı */
   .mp-box { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 13px 14px; margin-bottom: 20px; }
@@ -1333,17 +1338,40 @@
 
   <!-- VIEW: RECEIVABLES (alacaklar) -->
   <div id="viewReceivables">
-    <div class="section-head">
-      <div class="section-title">Cari <em>hesaplar</em></div>
-      <div class="section-count" id="sectionCount">0 kayıt</div>
+    <div class="atabs">
+      <button class="atab active" data-atab="accounts">Cari hesaplar<span class="cnt" id="atCntAcc">0</span></button>
+      <button class="atab" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntInc">0</span></button>
     </div>
-    <div class="filter-row">
-      <button class="filter active" data-filter="active">Açık hesaplar<span id="cntActive">0</span></button>
-      <button class="filter" data-filter="overdue">Geciken<span id="cntOverdue">0</span></button>
-      <button class="filter" data-filter="settled">Kapalı<span id="cntSettled">0</span></button>
-      <button class="filter" data-filter="all">Hepsi<span id="cntAll">0</span></button>
+    <div id="aPanelAccounts">
+      <div class="section-head">
+        <div class="section-title">Cari <em>hesaplar</em></div>
+        <div class="section-count" id="sectionCount">0 kayıt</div>
+      </div>
+      <div class="filter-row">
+        <button class="filter active" data-filter="active">Açık hesaplar<span id="cntActive">0</span></button>
+        <button class="filter" data-filter="overdue">Geciken<span id="cntOverdue">0</span></button>
+        <button class="filter" data-filter="settled">Kapalı<span id="cntSettled">0</span></button>
+        <button class="filter" data-filter="all">Hepsi<span id="cntAll">0</span></button>
+      </div>
+      <div class="contact-list" id="contactList"></div>
     </div>
-    <div class="contact-list" id="contactList"></div>
+    <div id="aPanelIncomes" style="display:none;">
+      <div class="sub-summary">
+        <div class="sub-sum-card">
+          <div class="sub-sum-label">Aylık gelir</div>
+          <div class="sub-sum-val" id="incMonthly">₺0</div>
+        </div>
+        <div class="sub-sum-card">
+          <div class="sub-sum-label">Yıllık</div>
+          <div class="sub-sum-val" id="incYearly">₺0</div>
+        </div>
+      </div>
+      <div class="section-head">
+        <div class="section-title">Gelir <em>kayıtları</em></div>
+        <div class="section-count" id="incSectionCount">0 kayıt</div>
+      </div>
+      <div class="contact-list" id="incomeList"></div>
+    </div>
   </div>
 
   <!-- VIEW: DEBTS (borçlar) -->
@@ -2082,6 +2110,93 @@
   </div>
 </div>
 
+<!-- ============ DÜZENLİ GELİR FORM SHEET ============ -->
+<div class="scrim" id="scrimIncome">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="incFormTitle">Yeni <em>gelir</em></div>
+        <div class="sheet-sub">Her ay otomatik işler</div>
+      </div>
+      <button class="sheet-close" id="incClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Gelir adı *</label>
+          <input type="text" class="field-input" id="iName" placeholder="Örn: Daire 3 kirası" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="field-label">Kaynak</label>
+          <input type="text" class="field-input" id="iSource" placeholder="Örn: Kiracı / İşveren" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Süre</label>
+        <div class="seg" id="iTermSeg">
+          <button type="button" class="seg-btn active" data-term="open">Süresiz</button>
+          <button type="button" class="seg-btn" data-term="fixed">Süreli</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Tutar tipi</label>
+        <div class="seg" id="iVarSeg">
+          <button type="button" class="seg-btn active" data-var="fixed">Sabit</button>
+          <button type="button" class="seg-btn" data-var="variable">Değişken</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" id="iAmountLabel">Aylık tutar (₺) *</label>
+          <input type="number" class="field-input" id="iAmount" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="field" id="iDayField">
+          <label class="field-label">Ayın kaçında? *</label>
+          <input type="number" class="field-input" id="iDay" placeholder="1" inputmode="numeric" step="1" min="1" max="31">
+        </div>
+        <div class="field" id="iCountField" style="display:none;">
+          <label class="field-label">Ay sayısı *</label>
+          <input type="number" class="field-input" id="iCount" placeholder="12" inputmode="numeric" step="1" min="1">
+        </div>
+      </div>
+      <div class="field" id="iStartField" style="display:none;">
+        <label class="field-label">İlk tahsilat tarihi *</label>
+        <input type="date" class="field-input" id="iStart">
+      </div>
+      <div class="field" id="iActualsWrap" style="display:none;">
+        <label class="field-label">Aylık gerçek tutarlar</label>
+        <div id="iActuals"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Kategori</label>
+        <select class="field-input" id="iCategory"></select>
+      </div>
+      <div class="field">
+        <label class="field-label">Not (opsiyonel)</label>
+        <input type="text" class="field-input" id="iNote" placeholder="Detay" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label">Nereye geldi?</label>
+        <div class="seg" id="incMethodSeg">
+          <button type="button" class="seg-btn" data-method="nakit">Nakit</button>
+          <button type="button" class="seg-btn active" data-method="banka">Banka</button>
+        </div>
+      </div>
+      <div class="field" id="incBankField">
+        <label class="field-label">Banka / hesap</label>
+        <select class="field-input" id="incBank"></select>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="incDelete" style="display:none;">Sil</button>
+      <button class="btn btn-ghost" id="incToggle" style="display:none;">Durdur</button>
+      <button class="btn btn-ghost" id="incCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="incSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ ABONELİK KATEGORİLERİ SHEET ============ -->
 <div class="scrim" id="scrimCats">
   <div class="sheet">
@@ -2130,7 +2245,8 @@ const RATES_TTL = 15 * 60 * 1000;
 
 let store = { contacts: [], debts: [] };
 let filter = 'active';
-let mode = 'receivables'; // 'receivables' | 'debts'
+let mode = 'receivables'; // 'receivables' | 'debts' | 'subs'
+let acctSubtab = 'accounts'; // 'accounts' | 'incomes'
 let debtFilter = 'active';
 let dPlan = 'installment'; // borç formu: 'installment' | 'flat'
 let editingRates = { yasal: [], avans: [] };
@@ -2141,6 +2257,7 @@ let currentContactId = null;
 let editingDebtId = null;
 let currentDebtId = null;
 let editingSubId = null;
+let editingIncomeId = null;
 let txMode = null; // 'debt' | 'payment' | {edit: txId}
 let todayRates = null;
 let hintTimer = null;
@@ -2153,6 +2270,7 @@ function load() {
   if (!store.contacts) store.contacts = [];
   if (!store.debts) store.debts = [];
   if (!store.subs) store.subs = [];
+  if (!store.incomes) store.incomes = [];
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
     if (d.plan === 'installment' && !d.paidIdx) d.paidIdx = [];
@@ -2430,13 +2548,22 @@ function loadSubcats() {
   subcats = [...SUBCAT_DEFAULT];
 }
 function persistSubcats() { localStorage.setItem(SUBCAT_KEY, JSON.stringify(subcats)); }
+const INCCAT_KEY = 'cari_gelir_kategorileri_v1';
+const INCCAT_DEFAULT = ['Kira', 'Maaş', 'Diğer'];
+let inccats = [];
+function loadIncCats() {
+  try { const a = JSON.parse(localStorage.getItem(INCCAT_KEY)); if (Array.isArray(a) && a.length) { inccats = a; return; } } catch(e){}
+  inccats = [...INCCAT_DEFAULT];
+}
+function persistIncCats() { localStorage.setItem(INCCAT_KEY, JSON.stringify(inccats)); }
 // Eski anahtar tabanlı kategorileri etikete çevir
 const SUBCAT_LEGACY = { dijital: 'Dijital / üyelik', fatura: 'Fatura', spor: 'Spor', diger: 'Diğer' };
 function catLabel(c) { return SUBCAT_LEGACY[c] || c || 'Diğer'; }
-function buildCatOptions(selected) {
+function buildCatOptions(selected, list) {
+  list = list || subcats;
   const sel = selected ? catLabel(selected) : '';   // boş seçimde varsayılan kategori dayatma
-  let html = subcats.map(c => `<option value="${escapeHtml(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
-  if (sel && !subcats.includes(sel)) html = `<option value="${escapeHtml(sel)}" selected>${escapeHtml(sel)}</option>` + html;
+  let html = list.map(c => `<option value="${escapeHtml(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  if (sel && !list.includes(sel)) html = `<option value="${escapeHtml(sel)}" selected>${escapeHtml(sel)}</option>` + html;
   html += `<option value="__manage__">＋ Kategori ekle / düzenle…</option>`;
   return html;
 }
@@ -2840,6 +2967,7 @@ function closeContactForm() { scrimContact.classList.remove('open'); editingCont
 document.getElementById('fabAdd').addEventListener('click', () => {
   if (mode === 'debts') openDebtForm();
   else if (mode === 'subs') openSubForm();
+  else if (mode === 'receivables' && acctSubtab === 'incomes') openIncomeForm();
   else openContactForm();
 });
 document.getElementById('contactCancel').addEventListener('click', closeContactForm);
@@ -3362,23 +3490,39 @@ function renderSummary() {
   document.getElementById('sumReceivable').textContent = fmtTL(recv) + ' alacak';
   document.getElementById('sumDebt').textContent = fmtTL(debt) + ' borç';
 
-  document.getElementById('mtRecv').textContent = (store.contacts || []).filter(contactIsActive).length;
+  const activeContacts = (store.contacts || []).filter(contactIsActive).length;
+  document.getElementById('mtRecv').textContent = activeContacts;
+  document.getElementById('atCntAcc').textContent = activeContacts;
   document.getElementById('mtDebt').textContent = (store.debts || []).filter(debtIsActive).length;
 }
 
+function fabLabelFor() {
+  if (mode === 'debts') return 'Yeni borç';
+  if (mode === 'subs') return 'Yeni abonelik';
+  return acctSubtab === 'incomes' ? 'Yeni gelir' : 'Yeni cari hesap';
+}
 function setMode(m) {
   mode = m;
   document.getElementById('viewReceivables').style.display = m === 'receivables' ? '' : 'none';
   document.getElementById('viewDebts').style.display = m === 'debts' ? '' : 'none';
   document.getElementById('viewSubs').style.display = m === 'subs' ? '' : 'none';
   document.querySelectorAll('.modetab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
-  document.getElementById('fabLabel').textContent = m === 'receivables' ? 'Yeni cari hesap' : m === 'debts' ? 'Yeni borç' : 'Yeni abonelik';
+  document.getElementById('fabLabel').textContent = fabLabelFor();
 }
 document.querySelectorAll('.modetab').forEach(t => {
   t.addEventListener('click', () => setMode(t.dataset.mode));
 });
+function setAcctSubtab(tab) {
+  acctSubtab = tab;
+  document.querySelectorAll('#viewReceivables .atab').forEach(b => b.classList.toggle('active', b.dataset.atab === tab));
+  document.getElementById('aPanelAccounts').style.display = tab === 'accounts' ? '' : 'none';
+  document.getElementById('aPanelIncomes').style.display = tab === 'incomes' ? '' : 'none';
+  document.getElementById('fabLabel').textContent = fabLabelFor();
+  if (tab === 'incomes') renderIncomes();
+}
+document.querySelectorAll('#viewReceivables .atab').forEach(t => t.addEventListener('click', () => setAcctSubtab(t.dataset.atab)));
 
-function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); }
+function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); renderIncomes(); }
 
 // ============ SUBSCRIPTIONS (abonelikler) ============
 const scrimSub = document.getElementById('scrimSub');
@@ -3591,6 +3735,160 @@ document.getElementById('subToggle').addEventListener('click', () => {
   s.active = s.active === false;
   persist(); renderSubs(); renderMonthPlan(); closeSubForm();
   toast(s.active === false ? 'İptal edildi' : 'Aktifleştirildi', 'success');
+});
+
+// ============ DÜZENLİ GELİRLER ============
+const scrimIncome = document.getElementById('scrimIncome');
+function renderIncomes() {
+  const incs = store.incomes || [];
+  const todayM = todayISO().slice(0, 7);
+  const ongoing = incs.filter(subOngoing);
+  const monthly = incs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? subAmountForMonth(s, todayM) : 0), 0);
+  let yearly = 0;
+  for (let i = 0; i < 12; i++) { const m = monthKeyAdd(todayM, i); incs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); }); }
+  document.getElementById('incMonthly').textContent = fmtTL(monthly);
+  document.getElementById('incYearly').textContent = fmtTL(yearly);
+  document.getElementById('atCntInc').textContent = ongoing.length;
+  document.getElementById('incSectionCount').textContent = incs.length + ' kayıt';
+  const list = document.getElementById('incomeList');
+  if (!incs.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-mark">∅</div><div class="empty-title">Boş</div><div class="empty-sub">Henüz düzenli gelir yok.<br>Kira, maaş gibi gelirleri ekle; her ay otomatik işler.</div></div>`;
+    return;
+  }
+  const sorted = [...incs].sort((a, b) => {
+    const aa = subOngoing(a), ba = subOngoing(b);
+    if (aa !== ba) return aa ? -1 : 1;
+    return (subNextDate(a) || '9999').localeCompare(subNextDate(b) || '9999');
+  });
+  list.innerHTML = sorted.map(s => {
+    const cancelled = s.active === false;
+    const done = subCompleted(s);
+    const dim = cancelled || done;
+    const cat = catLabel(s.category);
+    const src = s.company ? `${escapeHtml(s.company)}<span class="dot">·</span>` : '';
+    const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
+    const nb = subNextDate(s);
+    let core;
+    if (cancelled) core = 'durduruldu';
+    else if (s.term > 0) core = done ? `${s.term} ay<span class="dot">·</span>bitti` : `${s.term} ay<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+    else core = `her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+    const meta = `${src}${cat}<span class="dot">·</span>${core}${chan}`;
+    return `<div class="contact ${dim ? 'settled' : ''}" data-iid="${s.id}">
+      <div class="cat-chip personal" style="background:var(--forest-bg);color:var(--forest);border-color:var(--forest-bg);">${initials(s.name)}</div>
+      <div class="contact-main">
+        <div class="contact-name">${escapeHtml(s.name)}</div>
+        <div class="contact-meta">${meta}</div>
+      </div>
+      <div class="contact-amount">
+        <div class="main" style="color:var(--forest);">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
+        <div class="sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · süreli' : 'aylık')}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.contact').forEach(el => el.addEventListener('click', () => openIncomeForm(el.dataset.iid)));
+}
+function renderIncActuals(s) {
+  const host = document.getElementById('iActuals');
+  const todayM = todayISO().slice(0, 7);
+  const ac = (s && s.actuals) || {};
+  host.innerHTML = [0, -1, -2, -3, -4, -5].map(i => monthKeyAdd(todayM, i)).map(m => {
+    const label = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const val = ac[m] != null ? ac[m] : '';
+    return `<div class="act-row"><span>${label}${m === todayM ? ' · bu ay' : ''}</span><input type="number" class="field-input iact-in" data-m="${m}" value="${val}" placeholder="tahmini" inputmode="decimal" step="0.01"></div>`;
+  }).join('');
+}
+function setIncTerm(mode) {
+  const fixed = mode === 'fixed';
+  document.querySelectorAll('#iTermSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.term === mode));
+  document.getElementById('iDayField').style.display = fixed ? 'none' : '';
+  document.getElementById('iCountField').style.display = fixed ? '' : 'none';
+  document.getElementById('iStartField').style.display = fixed ? '' : 'none';
+}
+function setIncVar(mode) {
+  const variable = mode === 'variable';
+  document.querySelectorAll('#iVarSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.var === mode));
+  document.getElementById('iActualsWrap').style.display = variable ? '' : 'none';
+  document.getElementById('iAmountLabel').textContent = variable ? 'Tahmini aylık tutar (₺) *' : 'Aylık tutar (₺) *';
+}
+function openIncomeForm(id) {
+  editingIncomeId = id || null;
+  const s = id ? (store.incomes || []).find(x => x.id === id) : null;
+  document.getElementById('incFormTitle').innerHTML = s ? 'Geliri <em>düzenle</em>' : 'Yeni <em>gelir</em>';
+  document.getElementById('iName').value = s ? s.name : '';
+  document.getElementById('iSource').value = s && s.company ? s.company : '';
+  document.getElementById('iAmount').value = s && s.amount != null ? s.amount : '';
+  document.getElementById('iDay').value = s && s.day != null ? s.day : '1';
+  const fixed = !!(s && s.term > 0);
+  document.getElementById('iCount').value = fixed ? s.term : '';
+  document.getElementById('iStart').value = fixed && s.startDate ? s.startDate : todayISO();
+  setIncTerm(fixed ? 'fixed' : 'open');
+  renderIncActuals(s);
+  setIncVar(s && s.variable ? 'variable' : 'fixed');
+  document.getElementById('iCategory').innerHTML = buildCatOptions(s ? s.category : '', inccats);
+  document.getElementById('iNote').value = s && s.note ? s.note : '';
+  setMethod('inc', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
+  document.getElementById('incDelete').style.display = s ? '' : 'none';
+  const tog = document.getElementById('incToggle');
+  if (s) { tog.style.display = ''; tog.textContent = s.active === false ? 'Devam ettir' : 'Durdur'; }
+  else tog.style.display = 'none';
+  scrimIncome.classList.add('open');
+  setTimeout(() => document.getElementById('iName').focus(), 250);
+}
+function closeIncomeForm() { scrimIncome.classList.remove('open'); editingIncomeId = null; }
+document.querySelectorAll('#iTermSeg .seg-btn').forEach(b => b.addEventListener('click', () => setIncTerm(b.dataset.term)));
+document.querySelectorAll('#iVarSeg .seg-btn').forEach(b => b.addEventListener('click', () => setIncVar(b.dataset.var)));
+document.getElementById('incClose').addEventListener('click', closeIncomeForm);
+document.getElementById('incCancel').addEventListener('click', closeIncomeForm);
+scrimIncome.addEventListener('click', e => { if (e.target === scrimIncome) closeIncomeForm(); });
+document.getElementById('incSave').addEventListener('click', () => {
+  const name = document.getElementById('iName').value.trim();
+  const company = document.getElementById('iSource').value.trim();
+  const amount = parseFloat(document.getElementById('iAmount').value);
+  let day = parseInt(document.getElementById('iDay').value, 10);
+  const category = document.getElementById('iCategory').value;
+  const note = document.getElementById('iNote').value.trim();
+  if (!name) { toast('Ad gerekli', 'error'); return; }
+  if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
+  const fixed = !!document.querySelector('#iTermSeg .seg-btn.active[data-term="fixed"]');
+  let term = 0, startDate = null;
+  if (fixed) {
+    term = parseInt(document.getElementById('iCount').value, 10);
+    startDate = document.getElementById('iStart').value;
+    if (!term || term < 1) { toast('Ay sayısı gerekli', 'error'); return; }
+    if (!startDate) { toast('İlk tahsilat tarihi gerekli', 'error'); return; }
+    day = Number(startDate.slice(8, 10));
+  } else { if (!day || day < 1) day = 1; if (day > 31) day = 31; }
+  const variable = !!document.querySelector('#iVarSeg .seg-btn.active[data-var="variable"]');
+  const actuals = {};
+  if (variable) document.querySelectorAll('#iActuals .iact-in').forEach(inp => { const v = parseFloat(inp.value); if (!isNaN(v)) actuals[inp.dataset.m] = v; });
+  const m = getMethod('inc');
+  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', variable, actuals: variable ? actuals : {} };
+  if (editingIncomeId) {
+    const s = store.incomes.find(x => x.id === editingIncomeId);
+    if (s) Object.assign(s, fields);
+    toast('Güncellendi', 'success');
+  } else {
+    store.incomes.push({ id: uid(), active: true, createdAt: Date.now(), ...fields });
+    toast('Gelir eklendi', 'success');
+  }
+  persist(); renderIncomes(); closeIncomeForm();
+});
+document.getElementById('incDelete').addEventListener('click', () => {
+  if (!editingIncomeId) return;
+  const s = store.incomes.find(x => x.id === editingIncomeId);
+  if (s && confirm(`"${s.name}" geliri silinsin mi?`)) {
+    store.incomes = store.incomes.filter(x => x.id !== editingIncomeId);
+    persist(); renderIncomes(); closeIncomeForm();
+    toast('Silindi', 'success');
+  }
+});
+document.getElementById('incToggle').addEventListener('click', () => {
+  if (!editingIncomeId) return;
+  const s = store.incomes.find(x => x.id === editingIncomeId);
+  if (!s) return;
+  s.active = s.active === false;
+  persist(); renderIncomes(); closeIncomeForm();
+  toast(s.active === false ? 'Durduruldu' : 'Devam ettirildi', 'success');
 });
 
 // ============ RENDER: DEBT LIST ============
@@ -4289,7 +4587,7 @@ function openBanks() { renderBankList(); scrimBanks.classList.add('open'); }
 function closeBanks() {
   scrimBanks.classList.remove('open');
   // Açık formlardaki banka listelerini güncelle (seçimi koru)
-  ['tx', 'd', 'dp', 'sub'].forEach(p => {
+  ['tx', 'd', 'dp', 'sub', 'inc'].forEach(p => {
     const s = document.getElementById(p + 'Bank');
     if (s) s.innerHTML = buildBankOptions(s.value === '__manage__' ? '' : s.value);
   });
@@ -4304,14 +4602,18 @@ scrimBanks.addEventListener('click', e => { if (e.target === scrimBanks) closeBa
 
 // ============ ABONELİK KATEGORİ EDİTÖRÜ ============
 const scrimCats = document.getElementById('scrimCats');
+let catEditTarget = 'sub';
+function activeCatList() { return catEditTarget === 'income' ? inccats : subcats; }
+function persistActiveCats() { if (catEditTarget === 'income') persistIncCats(); else persistSubcats(); }
 function renderCatList() {
+  const list = activeCatList();
   const host = document.getElementById('catList');
-  host.innerHTML = subcats.length
-    ? subcats.map((c, i) => `<div class="bank-row"><span>${escapeHtml(c)}</span><button type="button" class="rr-del" data-idx="${i}" style="width:32px;">×</button></div>`).join('')
+  host.innerHTML = list.length
+    ? list.map((c, i) => `<div class="bank-row"><span>${escapeHtml(c)}</span><button type="button" class="rr-del" data-idx="${i}" style="width:32px;">×</button></div>`).join('')
     : `<div style="font-size:11px;color:var(--faint);font-family:'IBM Plex Mono',monospace;">Kategori yok. Yukarıdan ekleyin.</div>`;
   host.querySelectorAll('.rr-del').forEach(btn => btn.addEventListener('click', () => {
-    subcats.splice(parseInt(btn.dataset.idx, 10), 1);
-    persistSubcats();
+    activeCatList().splice(parseInt(btn.dataset.idx, 10), 1);
+    persistActiveCats();
     renderCatList();
   }));
 }
@@ -4319,23 +4621,30 @@ function addCat() {
   const inp = document.getElementById('newCatName');
   const name = inp.value.trim();
   if (!name) return;
-  if (!subcats.some(c => c.toLowerCase() === name.toLowerCase())) { subcats.push(name); persistSubcats(); }
+  const list = activeCatList();
+  if (!list.some(c => c.toLowerCase() === name.toLowerCase())) { list.push(name); persistActiveCats(); }
   inp.value = '';
   renderCatList();
   inp.focus();
 }
-function openCats() { renderCatList(); scrimCats.classList.add('open'); }
+function openCats(target) { catEditTarget = target || 'sub'; renderCatList(); scrimCats.classList.add('open'); }
 function closeCats() {
   scrimCats.classList.remove('open');
-  const s = document.getElementById('sCategory');
-  if (s) s.innerHTML = buildCatOptions(s.value === '__manage__' ? '' : s.value);
+  if (catEditTarget === 'income') {
+    const s = document.getElementById('iCategory');
+    if (s) s.innerHTML = buildCatOptions(s.value === '__manage__' ? '' : s.value, inccats);
+  } else {
+    const s = document.getElementById('sCategory');
+    if (s) s.innerHTML = buildCatOptions(s.value === '__manage__' ? '' : s.value, subcats);
+  }
 }
 document.getElementById('addCatBtn').addEventListener('click', addCat);
 document.getElementById('newCatName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCat(); } });
 document.getElementById('catsClose').addEventListener('click', closeCats);
 document.getElementById('catsDone').addEventListener('click', closeCats);
 scrimCats.addEventListener('click', e => { if (e.target === scrimCats) closeCats(); });
-document.getElementById('sCategory').addEventListener('change', function() { if (this.value === '__manage__') openCats(); });
+document.getElementById('sCategory').addEventListener('change', function() { if (this.value === '__manage__') openCats('sub'); });
+document.getElementById('iCategory').addEventListener('change', function() { if (this.value === '__manage__') openCats('income'); });
 
 // ============ VERİLDİĞİNDE DEĞERLERİ (manuel override) ============
 const scrimFx = document.getElementById('scrimFx');
@@ -4533,7 +4842,8 @@ load();
 loadFaizRates();
 loadBanks();
 loadSubcats();
-['tx', 'd', 'dp', 'sub'].forEach(initMethodField);
+loadIncCats();
+['tx', 'd', 'dp', 'sub', 'inc'].forEach(initMethodField);
 document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('#subPlanSeg .seg-btn').forEach(x => x.classList.toggle('active', x === b));
 }));
