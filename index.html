@@ -1568,10 +1568,15 @@
         </select>
       </div>
       <div class="field">
-        <label class="field-label" id="dTitleLabel">Kuruluş / kredi adı *</label>
         <div style="display:flex;gap:10px;">
-          <select class="field-input" id="dLoanBank" style="display:none;flex:1;min-width:0;"></select>
-          <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off" style="flex:1;min-width:0;">
+          <div id="dLoanBankWrap" style="display:none;flex:1;min-width:0;">
+            <label class="field-label">Banka</label>
+            <select class="field-input" id="dLoanBank"></select>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <label class="field-label" id="dTitleLabel">Kuruluş / kredi adı *</label>
+            <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off">
+          </div>
         </div>
       </div>
       <div class="field">
@@ -2214,9 +2219,11 @@ const BANKS_DEFAULT = [
   'Türkiye Finans', 'Papara'
 ];
 let banks = [];
+function sortBanks() { banks.sort((a, b) => a.localeCompare(b, 'tr')); }
 function loadBanks() {
-  try { const a = JSON.parse(localStorage.getItem(BANKS_KEY)); if (Array.isArray(a)) { banks = a; return; } } catch(e){}
+  try { const a = JSON.parse(localStorage.getItem(BANKS_KEY)); if (Array.isArray(a)) { banks = a; sortBanks(); return; } } catch(e){}
   banks = [...BANKS_DEFAULT];
+  sortBanks();
 }
 function persistBanks() { localStorage.setItem(BANKS_KEY, JSON.stringify(banks)); }
 
@@ -3253,12 +3260,12 @@ function updateDebtTitleLabel() {
   const inp = document.getElementById('dTitle');
   const isLoan = cat === 'loan';
   // Kredi: banka solda + kredi adı sağda; nakit/banka seçimi yok (hep banka)
-  document.getElementById('dLoanBank').style.display = isLoan ? '' : 'none';
+  document.getElementById('dLoanBankWrap').style.display = isLoan ? '' : 'none';
   document.getElementById('dMethodField').style.display = isLoan ? 'none' : '';
   if (isLoan) document.getElementById('dBankField').style.display = 'none';
   if (cat === 'personal') { lbl.textContent = 'Kişi adı *'; inp.placeholder = 'Örn: Ali Veli'; }
   else if (cat === 'card') { lbl.textContent = 'Banka / kart adı *'; inp.placeholder = 'Örn: Bonus Kredi Kartı'; }
-  else { lbl.textContent = 'Banka · kredi adı *'; inp.placeholder = 'Örn: İhtiyaç kredisi'; }
+  else { lbl.textContent = 'Kredi adı *'; inp.placeholder = 'Örn: İhtiyaç kredisi'; }
 }
 
 function setDebtPlan(p) {
@@ -3708,7 +3715,7 @@ function addBank() {
   const inp = document.getElementById('newBankName');
   const name = inp.value.trim();
   if (!name) return;
-  if (!banks.some(b => b.toLowerCase() === name.toLowerCase())) { banks.push(name); persistBanks(); }
+  if (!banks.some(b => b.toLowerCase() === name.toLowerCase())) { banks.push(name); sortBanks(); persistBanks(); }
   inp.value = '';
   renderBankList();
   inp.focus();
