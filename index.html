@@ -3227,13 +3227,16 @@ function renderDebts() {
     const chip = d.category === 'personal' ? initials(d.title) : cat.short;
     const next = debtNextDue(d);
     const metaMid = d.plan === 'flat'
-      ? (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz')
+      ? (d.category === 'card'
+          ? (d.dueDate ? `son ödeme ${fmtDateShort(d.dueDate)}` : '—')
+          : (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz'))
       : `${t.paidCount}/${d.count} taksit`;
+    const displayName = d.category === 'card' && d.bank ? `${d.bank} - ${d.title}` : d.title;
 
     return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
       <div class="cat-chip ${d.category}">${chip}</div>
       <div class="contact-main">
-        <div class="contact-name">${escapeHtml(d.title)}</div>
+        <div class="contact-name">${escapeHtml(displayName)}</div>
         <div class="contact-meta">
           ${cat.label}<span class="dot">·</span>${metaMid}
           ${!settled && d.plan === 'installment' && next ? `<span class="dot">·</span>sonraki ${fmtDateShort(next)}` : ''}
