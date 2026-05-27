@@ -1183,6 +1183,11 @@
   }
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
+  /* Abonelik gerçek tutar satırı */
+  .act-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .act-row span { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-2); text-transform: capitalize; }
+  .act-row .field-input { padding: 8px 10px; font-size: 13px; text-align: right; }
+
   /* Abonelik özeti */
   .sub-summary { display: flex; gap: 10px; margin-bottom: 20px; }
   .sub-sum-card { flex: 1; background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 14px; }
@@ -2006,9 +2011,16 @@
           <button type="button" class="seg-btn" data-term="fixed">Süreli (taksitli)</button>
         </div>
       </div>
+      <div class="field">
+        <label class="field-label">Tutar tipi</label>
+        <div class="seg" id="sVarSeg">
+          <button type="button" class="seg-btn active" data-var="fixed">Sabit</button>
+          <button type="button" class="seg-btn" data-var="variable">Değişken</button>
+        </div>
+      </div>
       <div class="field-row">
         <div class="field">
-          <label class="field-label">Aylık tutar (₺) *</label>
+          <label class="field-label" id="sAmountLabel">Aylık tutar (₺) *</label>
           <input type="number" class="field-input" id="sAmount" placeholder="0" inputmode="decimal" step="0.01">
         </div>
         <div class="field" id="sDayField">
@@ -2023,6 +2035,10 @@
       <div class="field" id="sStartField" style="display:none;">
         <label class="field-label">İlk ödeme tarihi *</label>
         <input type="date" class="field-input" id="sStart">
+      </div>
+      <div class="field" id="sActualsWrap" style="display:none;">
+        <label class="field-label">Aylık gerçek tutarlar (fatura geldikçe)</label>
+        <div id="sActuals"></div>
       </div>
       <div class="field">
         <label class="field-label">Kategori</label>
@@ -3395,15 +3411,32 @@ function subNextDate(s) {
   for (let i = 0; i < s.term; i++) { const d = addMonths(start, i); if (d >= today) return d; }
   return null;
 }
+// Bir ayın (YYYY-MM) tutarı: değişken ve o ay için gerçek tutar girildiyse onu, yoksa tahmini/sabit tutarı kullan
+function subAmountForMonth(s, m) {
+  if (s.variable && s.actuals && s.actuals[m] != null) return Number(s.actuals[m]) || 0;
+  return Number(s.amount) || 0;
+}
+function subAmountEstimated(s, m) { return !!(s.variable && !(s.actuals && s.actuals[m] != null)); }
+function renderActualsEditor(s) {
+  const host = document.getElementById('sActuals');
+  const todayM = todayISO().slice(0, 7);
+  const ac = (s && s.actuals) || {};
+  const months = [0, -1, -2, -3, -4, -5].map(i => monthKeyAdd(todayM, i));
+  host.innerHTML = months.map(m => {
+    const label = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const val = ac[m] != null ? ac[m] : '';
+    return `<div class="act-row"><span>${label}${m === todayM ? ' · bu ay' : ''}</span><input type="number" class="field-input act-in" data-m="${m}" value="${val}" placeholder="tahmini" inputmode="decimal" step="0.01"></div>`;
+  }).join('');
+}
 function renderSubs() {
   const subs = store.subs || [];
   const todayM = todayISO().slice(0, 7);
   const ongoing = subs.filter(subOngoing);
-  const monthly = subs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? (Number(s.amount) || 0) : 0), 0);
+  const monthly = subs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? subAmountForMonth(s, todayM) : 0), 0);
   let yearly = 0;
   for (let i = 0; i < 12; i++) {
     const m = monthKeyAdd(todayM, i);
-    subs.forEach(s => { if (subChargesInMonth(s, m)) yearly += Number(s.amount) || 0; });
+    subs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); });
   }
   document.getElementById('subMonthly').textContent = fmtTL(monthly);
   document.getElementById('subYearly').textContent = fmtTL(yearly);
@@ -3443,8 +3476,8 @@ function renderSubs() {
         <div class="contact-meta">${meta}</div>
       </div>
       <div class="contact-amount">
-        <div class="main">${fmtTL(s.amount)}</div>
-        <div class="sub">${s.term > 0 ? 'aylık · taksit' : 'aylık'}</div>
+        <div class="main">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
+        <div class="sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · taksit' : 'aylık')}</div>
       </div>
     </div>`;
   }).join('');
@@ -3462,6 +3495,8 @@ function openSubForm(id) {
   document.getElementById('sCount').value = fixed ? s.term : '';
   document.getElementById('sStart').value = fixed && s.startDate ? s.startDate : todayISO();
   setSubTerm(fixed ? 'fixed' : 'open');
+  renderActualsEditor(s);
+  setVarType(s && s.variable ? 'variable' : 'fixed');
   document.getElementById('sCategory').innerHTML = buildCatOptions(s ? s.category : '');
   document.getElementById('sNote').value = s && s.note ? s.note : '';
   setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
@@ -3481,7 +3516,14 @@ function setSubTerm(mode) {
   document.getElementById('sCountField').style.display = fixed ? '' : 'none';
   document.getElementById('sStartField').style.display = fixed ? '' : 'none';
 }
+function setVarType(mode) {
+  const variable = mode === 'variable';
+  document.querySelectorAll('#sVarSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.var === mode));
+  document.getElementById('sActualsWrap').style.display = variable ? '' : 'none';
+  document.getElementById('sAmountLabel').textContent = variable ? 'Tahmini aylık tutar (₺) *' : 'Aylık tutar (₺) *';
+}
 document.querySelectorAll('#sTermSeg .seg-btn').forEach(b => b.addEventListener('click', () => setSubTerm(b.dataset.term)));
+document.querySelectorAll('#sVarSeg .seg-btn').forEach(b => b.addEventListener('click', () => setVarType(b.dataset.var)));
 document.getElementById('subClose').addEventListener('click', closeSubForm);
 document.getElementById('subCancel').addEventListener('click', closeSubForm);
 scrimSub.addEventListener('click', e => { if (e.target === scrimSub) closeSubForm(); });
@@ -3506,9 +3548,17 @@ document.getElementById('subSave').addEventListener('click', () => {
     if (!day || day < 1) day = 1;
     if (day > 31) day = 31;
   }
+  const variable = !!document.querySelector('#sVarSeg .seg-btn.active[data-var="variable"]');
+  const actuals = {};
+  if (variable) {
+    document.querySelectorAll('#sActuals .act-in').forEach(inp => {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) actuals[inp.dataset.m] = v;
+    });
+  }
   const m = getMethod('sub');
   const inPlan = !!document.querySelector('#subPlanSeg .seg-btn.active[data-plan="yes"]');
-  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', inPlan };
+  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', inPlan, variable, actuals: variable ? actuals : {} };
   if (editingSubId) {
     const s = store.subs.find(x => x.id === editingSubId);
     if (s) Object.assign(s, fields);
@@ -3578,7 +3628,7 @@ function renderMonthPlan() {
   // Bir ayın tüm kalemleri: o aydaki borç ödemeleri + aktif abonelikler
   const monthItems = m => {
     const list = buckets[m] ? buckets[m].items.slice() : [];
-    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: Number(s.amount) || 0, name: s.name, sub: true }); });
+    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true }); });
     return list;
   };
   const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
