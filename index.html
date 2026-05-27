@@ -2016,6 +2016,24 @@
         <label class="field-label">Not (opsiyonel)</label>
         <input type="text" class="field-input" id="sNote" placeholder="Detay" autocomplete="off">
       </div>
+      <div class="field">
+        <label class="field-label">Ödeme kanalı</label>
+        <div class="seg" id="subMethodSeg">
+          <button type="button" class="seg-btn" data-method="nakit">Nakit</button>
+          <button type="button" class="seg-btn active" data-method="banka">Banka</button>
+        </div>
+      </div>
+      <div class="field" id="subBankField">
+        <label class="field-label">Banka / kart</label>
+        <select class="field-input" id="subBank"></select>
+      </div>
+      <div class="field">
+        <label class="field-label">Borçlarım ödeme planında göster</label>
+        <div class="seg" id="subPlanSeg">
+          <button type="button" class="seg-btn" data-plan="yes">Evet</button>
+          <button type="button" class="seg-btn active" data-plan="no">Hayır</button>
+        </div>
+      </div>
     </div>
     <div class="sheet-footer">
       <button class="btn btn-danger" id="subDelete" style="display:none;">Sil</button>
@@ -3308,9 +3326,10 @@ function renderSubs() {
   list.innerHTML = sorted.map(s => {
     const inactive = s.active === false;
     const cat = SUB_CATS[s.category] || 'Diğer';
+    const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
     const meta = inactive
       ? `${cat}<span class="dot">·</span>iptal`
-      : `${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}`;
+      : `${cat}<span class="dot">·</span>her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nextBillingDate(s.day))}${chan}`;
     return `<div class="contact ${inactive ? 'settled' : ''}" data-sid="${s.id}">
       <div class="cat-chip personal">${initials(s.name)}</div>
       <div class="contact-main">
@@ -3334,6 +3353,8 @@ function openSubForm(id) {
   document.getElementById('sDay').value = s && s.day != null ? s.day : '1';
   document.getElementById('sCategory').value = s ? (s.category || 'dijital') : 'dijital';
   document.getElementById('sNote').value = s && s.note ? s.note : '';
+  setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
+  document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.plan === ((s && s.inPlan) ? 'yes' : 'no')));
   document.getElementById('subDelete').style.display = s ? '' : 'none';
   const tog = document.getElementById('subToggle');
   if (s) { tog.style.display = ''; tog.textContent = s.active === false ? 'Aktifleştir' : 'İptal et'; }
@@ -3355,12 +3376,14 @@ document.getElementById('subSave').addEventListener('click', () => {
   if (!amount || amount <= 0) { toast('Geçerli tutar girin', 'error'); return; }
   if (!day || day < 1) day = 1;
   if (day > 31) day = 31;
+  const m = getMethod('sub');
+  const inPlan = !!document.querySelector('#subPlanSeg .seg-btn.active[data-plan="yes"]');
   if (editingSubId) {
     const s = store.subs.find(x => x.id === editingSubId);
-    if (s) { s.name = name; s.amount = amount; s.day = day; s.category = category; s.note = note; }
+    if (s) { s.name = name; s.amount = amount; s.day = day; s.category = category; s.note = note; s.method = m.method; s.bank = m.bank || ''; s.inPlan = inPlan; }
     toast('Güncellendi', 'success');
   } else {
-    store.subs.push({ id: uid(), name, amount, day, category, note, active: true, createdAt: Date.now() });
+    store.subs.push({ id: uid(), name, amount, day, category, note, method: m.method, bank: m.bank || '', inPlan, active: true, createdAt: Date.now() });
     toast('Abonelik eklendi', 'success');
   }
   persist(); renderSubs(); renderMonthPlan(); closeSubForm();
@@ -3400,7 +3423,7 @@ function renderMonthPlan() {
       if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d) });
     }
   });
-  const activeSubs = (store.subs || []).filter(s => s.active !== false && (Number(s.amount) || 0) > 0);
+  const activeSubs = (store.subs || []).filter(s => s.active !== false && s.inPlan && (Number(s.amount) || 0) > 0);
   if (!items.length && !activeSubs.length) { host.innerHTML = ''; return; }
 
   const buckets = {};
@@ -4081,7 +4104,7 @@ function openBanks() { renderBankList(); scrimBanks.classList.add('open'); }
 function closeBanks() {
   scrimBanks.classList.remove('open');
   // Açık formlardaki banka listelerini güncelle (seçimi koru)
-  ['tx', 'd', 'dp'].forEach(p => {
+  ['tx', 'd', 'dp', 'sub'].forEach(p => {
     const s = document.getElementById(p + 'Bank');
     if (s) s.innerHTML = buildBankOptions(s.value === '__manage__' ? '' : s.value);
   });
@@ -4289,7 +4312,10 @@ document.getElementById('dSettleBtn').addEventListener('click', () => {
 load();
 loadFaizRates();
 loadBanks();
-['tx', 'd', 'dp'].forEach(initMethodField);
+['tx', 'd', 'dp', 'sub'].forEach(initMethodField);
+document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#subPlanSeg .seg-btn').forEach(x => x.classList.toggle('active', x === b));
+}));
 txCurF = curField('txCur', 'txAmount', 'txDate', 'txTry', 'txTryField', 'txAmountLabel');
 dpCurF = curField('dpCur', 'dpAmount', 'dpDate', 'dpTry', 'dpTryField', 'dpAmountLabel');
 dCurF = curField('dCur', 'dTotal', 'dStartDate', 'dTotalTry', 'dTryField', 'dTotalLabel');
