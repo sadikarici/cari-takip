@@ -1632,7 +1632,7 @@
         </div>
       </div>
       <div class="field-row">
-        <div class="field">
+        <div class="field" id="dStartField">
           <label class="field-label">Borcun alındığı tarih *</label>
           <input type="date" class="field-input" id="dStartDate">
         </div>
@@ -3306,6 +3306,7 @@ function applyDebtCategory(cat, resetPlan) {
   const isCard = cat === 'card';
   document.getElementById('dPlanField').style.display = isCard ? 'none' : '';
   document.getElementById('dCardFields').style.display = isCard ? '' : 'none';
+  document.getElementById('dStartField').style.display = isCard ? 'none' : '';
   document.getElementById('dDueLabel').textContent = isCard ? 'Son ödeme tarihi' : 'Vade tarihi (ops.)';
   if (isCard) {
     dPlan = 'flat';
