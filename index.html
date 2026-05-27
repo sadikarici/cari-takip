@@ -515,8 +515,8 @@
   }
   .field-input::placeholder { color: var(--faint); }
   .field-input:focus { border-color: var(--ink); }
-  /* iOS boş tarih input'unu içeriğe göre daraltıyor; tam genişliğe zorla */
-  input[type="date"].field-input { min-width: 100%; }
+  /* iOS boş tarih input'unu daraltıyor; dolu kutuyla aynı en/boya zorla */
+  input[type="date"].field-input { min-width: 100%; min-height: calc(1.45em + 24px); }
   textarea.field-input { resize: vertical; min-height: 60px; font-family: inherit; }
 
   /* Conversion hint — compact inline */
