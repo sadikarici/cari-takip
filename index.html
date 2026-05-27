@@ -1999,6 +1999,13 @@
           <input type="text" class="field-input" id="sCompany" placeholder="Örn: Netflix" autocomplete="off">
         </div>
       </div>
+      <div class="field">
+        <label class="field-label">Süre</label>
+        <div class="seg" id="sTermSeg">
+          <button type="button" class="seg-btn active" data-term="open">Süresiz</button>
+          <button type="button" class="seg-btn" data-term="fixed">Süreli (taksitli)</button>
+        </div>
+      </div>
       <div class="field-row">
         <div class="field">
           <label class="field-label">Aylık tutar (₺) *</label>
@@ -2011,13 +2018,6 @@
         <div class="field" id="sCountField" style="display:none;">
           <label class="field-label">Taksit sayısı *</label>
           <input type="number" class="field-input" id="sCount" placeholder="12" inputmode="numeric" step="1" min="1">
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label">Süre</label>
-        <div class="seg" id="sTermSeg">
-          <button type="button" class="seg-btn active" data-term="open">Süresiz</button>
-          <button type="button" class="seg-btn" data-term="fixed">Süreli (taksitli)</button>
         </div>
       </div>
       <div class="field" id="sStartField" style="display:none;">
