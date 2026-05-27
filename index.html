@@ -1199,16 +1199,22 @@
   .mp-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 11px; }
   .mp-overdue { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--red-bg); color: var(--red); border-radius: var(--r-md); padding: 9px 11px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
   .mp-overdue strong { font-family: 'IBM Plex Serif', serif; font-size: 14px; }
-  .mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .mp-tile { border: 1px solid var(--hair-2); border-radius: var(--r-md); padding: 11px 6px; text-align: center; cursor: pointer; background: var(--paper); }
+  .mp-grid { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; scroll-snap-type: x proximity; }
+  .mp-grid::-webkit-scrollbar { display: none; }
+  .mp-tile { flex: 0 0 30%; scroll-snap-align: start; border: 1px solid var(--hair-2); border-radius: var(--r-md); padding: 11px 6px; text-align: center; cursor: pointer; background: var(--paper); }
   .mp-tile.active { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  .mp-tile-month { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .mp-tile-month { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
   .mp-tile-total { font-family: 'IBM Plex Serif', serif; font-size: 14px; font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mp-more { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--faint); text-align: center; margin-top: 9px; }
-  .mp-detail { margin-top: 12px; }
+  .mp-hint { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--faint); text-align: center; margin-top: 8px; }
+  .mp-detail { margin-top: 14px; }
   .mp-detail:empty { display: none; }
-  .mp-detail-head { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 2px; }
-  .mp-item { display: flex; justify-content: space-between; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-2); padding: 5px 0; border-top: 1px solid var(--hair); }
+  .mp-detail-head { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+  .mp-item { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid var(--hair); }
+  .mp-item:first-of-type { border-top: none; }
+  .mp-item-l { min-width: 0; }
+  .mp-item-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mp-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .mp-item-amt { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; white-space: nowrap; }
   .per-row {
     display: flex;
     justify-content: space-between;
@@ -3633,12 +3639,10 @@ function renderMonthPlan() {
   };
   const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
 
-  // Gösterilecek aylar: yaklaşan 3 takvim ayı ∪ ileri tarihli borç ayları
+  // Gösterilecek aylar: yaklaşan 12 takvim ayı ∪ ileri tarihli borç ayları (yatay kaydırılır)
   const debtFuture = Object.keys(buckets).filter(m => m >= todayM);
-  const next3 = [0, 1, 2].map(i => addMonthsKey(todayM, i));
-  const futureMonths = [...new Set([...debtFuture, ...next3])].sort();
-  const showMonths = futureMonths.slice(0, 3);
-  const more = futureMonths.length - showMonths.length;
+  const next12 = Array.from({ length: 12 }, (_, i) => addMonthsKey(todayM, i));
+  const showMonths = [...new Set([...debtFuture, ...next12])].sort();
 
   // Gecikmiş: yalnızca geçmiş borç ödemeleri (abonelikler hariç)
   const overdueMonths = Object.keys(buckets).filter(m => m < todayM);
@@ -3651,15 +3655,15 @@ function renderMonthPlan() {
     return s;
   };
   const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it =>
-    `<div class="mp-item"><span>${escapeHtml(it.name)}${it.sub ? ' · abonelik' : ''} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
+    `<div class="mp-item"><div class="mp-item-l"><div class="mp-item-name">${escapeHtml(it.name)}</div><div class="mp-item-date">${fmtDateShort(it.date)}${it.sub ? ' · abonelik' : ''}</div></div><div class="mp-item-amt">${fmtTL(it.amount)}</div></div>`).join('');
 
   let html = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>`;
   if (overdueTotal > 0.01) html += `<div class="mp-overdue" data-key="ov"><span>⚠ Gecikmiş ödemeler</span><strong>${fmtTL(overdueTotal)}</strong></div>`;
   if (showMonths.length) {
     html += `<div class="mp-grid">` + showMonths.map(m =>
       `<div class="mp-tile" data-key="${m}"><div class="mp-tile-month">${monthLabel(m)}</div><div class="mp-tile-total">${fmtTL(monthTotal(m))}</div></div>`).join('') + `</div>`;
+    html += `<div class="mp-hint">← aylar arasında kaydır · ay seçince dökümü açılır →</div>`;
   }
-  if (more > 0) html += `<div class="mp-more">+${more} ay daha</div>`;
   html += `<div class="mp-detail" id="mpDetail"></div></div>`;
   host.innerHTML = html;
 
