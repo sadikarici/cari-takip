@@ -3257,12 +3257,16 @@ function updateDebtTitleLabel() {
   const lbl = document.getElementById('dTitleLabel');
   const inp = document.getElementById('dTitle');
   const isLoan = cat === 'loan';
-  // Kredi: banka solda + kredi adı sağda; nakit/banka seçimi yok (hep banka)
-  document.getElementById('dLoanBankWrap').style.display = isLoan ? '' : 'none';
-  document.getElementById('dMethodField').style.display = isLoan ? 'none' : '';
-  if (isLoan) document.getElementById('dBankField').style.display = 'none';
+  const isCard = cat === 'card';
+  const bankMode = isLoan || isCard;
+  // Kredi & Kredi Kartı: banka seçimi ad satırında, nakit/banka seçimi yok (hep banka)
+  const wrap = document.getElementById('dLoanBankWrap');
+  wrap.style.display = bankMode ? '' : 'none';
+  wrap.style.order = isCard ? '1' : '';   // kartta banka sağda, kredide solda
+  document.getElementById('dMethodField').style.display = bankMode ? 'none' : '';
+  if (bankMode) document.getElementById('dBankField').style.display = 'none';
   if (cat === 'personal') { lbl.textContent = 'Kişi adı *'; inp.placeholder = 'Örn: Ali Veli'; }
-  else if (cat === 'card') { lbl.textContent = 'Banka / kart adı *'; inp.placeholder = 'Örn: Bonus Kredi Kartı'; }
+  else if (isCard) { lbl.textContent = 'Kart adı *'; inp.placeholder = 'Örn: Bonus'; }
   else { lbl.textContent = 'Kredi adı *'; inp.placeholder = 'Örn: İhtiyaç kredisi'; }
 }
 
@@ -3329,7 +3333,7 @@ function openDebtForm(id) {
   document.getElementById('dNote').value = d && d.note ? d.note : '';
   dCurF.set(d ? d.cur : 'TRY', d && d.total != null ? d.total : '', d ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
-  document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && d.category === 'loan' ? (d.bank || '') : '');
+  document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && (d.category === 'loan' || d.category === 'card') ? (d.bank || '') : '');
   setDebtPlan(d ? (d.plan || 'installment') : 'installment');
   updatePlanOptions(d ? d.category : 'loan');
   updateDebtTitleLabel();
@@ -3391,7 +3395,7 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
   try { snapshot = await getHistoricalRates(startDate); } catch(e) {}
 
   let m;
-  if (category === 'loan') {
+  if (category === 'loan' || category === 'card') {
     const lb = document.getElementById('dLoanBank').value;
     m = { method: 'banka', bank: (lb && lb !== '__manage__') ? lb : '' };
   } else {
