@@ -1182,6 +1182,18 @@
   }
   .kz-sub .up { color: var(--forest); }
   .kz-sub .dn { color: var(--red); }
+  /* Aylık ödeme planı */
+  .mp-box { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 4px 14px 8px; margin-bottom: 20px; }
+  .mp-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 11px 0 7px; }
+  .mp-row { border-top: 1px solid var(--hair); }
+  .mp-head { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; cursor: pointer; gap: 12px; }
+  .mp-month { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: var(--ink); text-transform: capitalize; }
+  .mp-row.past .mp-month { color: var(--red); }
+  .mp-total { font-family: 'IBM Plex Serif', serif; font-size: 16px; font-weight: 500; white-space: nowrap; }
+  .mp-row.past .mp-total { color: var(--red); }
+  .mp-items { display: none; padding: 0 0 8px; }
+  .mp-row.open .mp-items { display: block; }
+  .mp-item { display: flex; justify-content: space-between; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); padding: 3px 0; }
   .per-row {
     display: flex;
     justify-content: space-between;
@@ -1314,6 +1326,7 @@
 
   <!-- VIEW: DEBTS (borçlar) -->
   <div id="viewDebts" style="display:none;">
+    <div id="monthPlan"></div>
     <div class="section-head">
       <div class="section-title">Borç <em>kayıtları</em></div>
       <div class="section-count" id="debtSectionCount">0 kayıt</div>
@@ -3182,7 +3195,48 @@ document.querySelectorAll('.modetab').forEach(t => {
 function refresh() { renderSummary(); render(); renderDebts(); }
 
 // ============ RENDER: DEBT LIST ============
+function debtName(d) {
+  return (d.category === 'card' || d.category === 'loan') && d.bank ? `${d.bank} - ${d.title}` : d.title;
+}
+// Yaklaşan ayların toplam ödeme yükü
+function renderMonthPlan() {
+  const host = document.getElementById('monthPlan');
+  if (!host) return;
+  const items = [];
+  (store.debts || []).forEach(d => {
+    if (d.plan === 'installment') {
+      debtSchedule(d).forEach(s => { if (!s.paid) items.push({ date: s.dueDate, amount: s.amount, name: debtName(d) }); });
+    } else {
+      const rem = debtTotals(d).remaining;
+      if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d) });
+    }
+  });
+  if (!items.length) { host.innerHTML = ''; return; }
+  const buckets = {};
+  items.forEach(it => {
+    const m = it.date.slice(0, 7);
+    if (!buckets[m]) buckets[m] = { total: 0, items: [] };
+    buckets[m].total += it.amount;
+    buckets[m].items.push(it);
+  });
+  const todayM = todayISO().slice(0, 7);
+  const rows = Object.keys(buckets).sort().map(m => {
+    const b = buckets[m];
+    const past = m < todayM;
+    const label = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const its = b.items.sort((a, b) => a.date.localeCompare(b.date)).map(it =>
+      `<div class="mp-item"><span>${escapeHtml(it.name)} · ${fmtDateShort(it.date)}</span><span>${fmtTL(it.amount)}</span></div>`).join('');
+    return `<div class="mp-row ${past ? 'past' : ''}">
+      <div class="mp-head"><div class="mp-month">${label}${past ? ' · gecikmiş' : ''}</div><div class="mp-total">${fmtTL(b.total)}</div></div>
+      <div class="mp-items">${its}</div>
+    </div>`;
+  }).join('');
+  host.innerHTML = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>${rows}</div>`;
+  host.querySelectorAll('.mp-head').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
+}
+
 function renderDebts() {
+  renderMonthPlan();
   const debts = store.debts || [];
 
   document.getElementById('dCntActive').textContent = debts.filter(debtIsActive).length;
@@ -3231,7 +3285,7 @@ function renderDebts() {
           ? (d.dueDate ? `son ödeme ${fmtDateShort(d.dueDate)}` : '—')
           : (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz'))
       : `${t.paidCount}/${d.count} taksit`;
-    const displayName = (d.category === 'card' || d.category === 'loan') && d.bank ? `${d.bank} - ${d.title}` : d.title;
+    const displayName = debtName(d);
 
     return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
       <div class="cat-chip ${d.category}">${chip}</div>
