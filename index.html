@@ -1156,6 +1156,8 @@
   .arc-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 500; color: var(--ink); }
   .arc-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted); margin-top: 2px; letter-spacing: 0.02em; }
   .arc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .arc-del { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--hair-2); background: var(--paper); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; cursor: pointer; padding: 0; flex-shrink: 0; }
+  .arc-del:active { background: var(--red-bg); color: var(--red); border-color: var(--red); }
   .arc-stat { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 11px 10px; }
   .arc-stat .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .arc-stat .val { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4975,9 +4977,25 @@ function renderArchiveList() {
         <div class="arc-title">${escapeHtml(a.label || a.year + ' arşivi')}</div>
         <div class="arc-sub">${dtStr} · alacak ${fmtTL(s.recvOpen || 0)} · borç ${fmtTL(s.debtRemaining || 0)}</div>
       </div>
+      <button type="button" class="arc-del" data-del-aid="${a.id}" aria-label="sil" title="arşivi sil">×</button>
     </div>`;
   }).join('');
-  list.querySelectorAll('.arc-item').forEach(el => el.addEventListener('click', () => openArchiveDetail(el.dataset.aid)));
+  list.querySelectorAll('.arc-item').forEach(el => el.addEventListener('click', e => {
+    if (e.target.closest('.arc-del')) return;
+    openArchiveDetail(el.dataset.aid);
+  }));
+  list.querySelectorAll('.arc-del').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const id = btn.dataset.delAid;
+    const a = (store.archives || []).find(x => x.id === id);
+    if (!a) return;
+    if (!confirm(`"${a.label || a.year + ' arşivi'}" silinsin mi?`)) return;
+    store.archives = (store.archives || []).filter(x => x.id !== id);
+    persist();
+    renderArchiveList();
+    refresh();
+    toast('Arşiv silindi', 'success');
+  }));
 }
 
 function openArchivesList() { renderArchiveList(); scrimArchives.classList.add('open'); }
