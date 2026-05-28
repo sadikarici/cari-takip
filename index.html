@@ -1655,6 +1655,13 @@
         </div>
         <div class="set-row-r" id="setCardsCnt">0</div>
       </div>
+      <div class="set-row" id="setOpenAccounts">
+        <div class="set-row-l">
+          <div class="set-row-t">Bankalarım</div>
+          <div class="set-row-s">hesap ekle · iban · hareketler</div>
+        </div>
+        <div class="set-row-r" id="setAccountsCnt">0</div>
+      </div>
     </div>
     <div class="set-section">
       <div class="set-section-head">
@@ -1920,7 +1927,7 @@
         </div>
       </div>
       <div class="field" id="txBankField" style="display:none;">
-        <label class="field-label">Banka</label>
+        <label class="field-label">Banka hesabı</label>
         <select class="field-input" id="txBank"></select>
       </div>
 
@@ -2044,7 +2051,7 @@
         </div>
       </div>
       <div class="field" id="dBankField" style="display:none;">
-        <label class="field-label">Banka</label>
+        <label class="field-label">Banka hesabı</label>
         <select class="field-input" id="dBank"></select>
       </div>
       <div class="hint-box" id="dHint" style="display:none;">
@@ -2201,7 +2208,7 @@
         </div>
       </div>
       <div class="field" id="dpBankField" style="display:none;">
-        <label class="field-label">Banka</label>
+        <label class="field-label">Banka hesabı</label>
         <select class="field-input" id="dpBank"></select>
       </div>
     </div>
@@ -2238,6 +2245,91 @@
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="ratesCancel">Vazgeç</button>
       <button class="btn btn-primary" id="ratesSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANK ACCOUNTS LIST SHEET ============ -->
+<div class="scrim" id="scrimAccounts">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Banka <em>hesaplarım</em></div>
+        <div class="sheet-sub">Banka · sahibi · IBAN</div>
+      </div>
+      <button class="sheet-close" id="accountsClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div id="accountList"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="accountsDone">Kapat</button>
+      <button class="btn btn-primary" id="accountsAdd">+ Hesap ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANK ACCOUNT FORM SHEET ============ -->
+<div class="scrim" id="scrimAccountForm">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="accountFormTitle">Yeni <em>banka hesabı</em></div>
+        <div class="sheet-sub">Banka · sahibi · IBAN (opsiyonel)</div>
+      </div>
+      <button class="sheet-close" id="accountFormClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row">
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Banka *</label>
+          <select class="field-input" id="aBank"></select>
+        </div>
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Hesap sahibi *</label>
+          <input type="text" class="field-input" id="aOwner" placeholder="Örn: Sadık Arıcı" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">IBAN (opsiyonel)</label>
+        <input type="text" class="field-input" id="aIban" placeholder="TR00 0000 0000 0000 0000 0000 00" autocomplete="off">
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="accountFormDelete" style="display:none;">Sil</button>
+      <button class="btn btn-ghost" id="accountFormCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="accountFormSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANK ACCOUNT DETAIL SHEET ============ -->
+<div class="scrim" id="scrimAccountDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="account-head">
+      <div class="account-identity">
+        <div class="card-tag" id="adTag" style="width:44px;height:44px;font-size:11px;">B</div>
+        <div style="flex:1; min-width:0;">
+          <div class="account-name" id="adTitle">—</div>
+          <div class="account-contact" id="adSub">—</div>
+        </div>
+        <button class="sheet-close" id="accountDetailClose" aria-label="Kapat"></button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div id="adIbanWrap" style="margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.04em;"></div>
+      <div class="section-head" style="padding:0 0 8px;">
+        <div class="section-title" style="font-size:14px;">Hesap <em>hareketleri</em></div>
+        <div class="section-count" id="adMoveCnt">0 kayıt</div>
+      </div>
+      <div id="adMovements"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="adEdit">Hesabı düzenle</button>
+      <button class="btn btn-primary" id="accountDetailDone">Kapat</button>
     </div>
   </div>
 </div>
@@ -2536,7 +2628,7 @@
         </div>
       </div>
       <div class="field" id="subBankField">
-        <label class="field-label">Banka / kart</label>
+        <label class="field-label">Banka hesabı</label>
         <select class="field-input" id="subBank"></select>
       </div>
       <div class="field">
@@ -2630,7 +2722,7 @@
         </div>
       </div>
       <div class="field" id="incBankField">
-        <label class="field-label">Banka / hesap</label>
+        <label class="field-label">Banka hesabı</label>
         <select class="field-input" id="incBank"></select>
       </div>
     </div>
@@ -2719,6 +2811,7 @@ function load() {
   if (!store.subs) store.subs = [];
   if (!store.incomes) store.incomes = [];
   if (!store.cards) store.cards = [];
+  if (!store.accounts) store.accounts = [];
   if (!store.paidLog) store.paidLog = {};
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
@@ -3056,20 +3149,44 @@ function buildCatOptions(selected, list) {
   html += `<option value="__manage__">＋ Kategori ekle / düzenle…</option>`;
   return html;
 }
+// Banka hesabı seçenekleri
+function buildAccountOptions(selectedId) {
+  const list = (store.accounts || []).slice().sort((a, b) => (a.bank + a.owner).localeCompare(b.bank + b.owner, 'tr'));
+  let html = '';
+  if (list.length === 0) html += `<option value="" disabled${!selectedId ? ' selected' : ''}>Henüz banka hesabı yok</option>`;
+  else if (!selectedId) html += `<option value="" disabled selected>Hesap seç…</option>`;
+  html += list.map(a => `<option value="${a.id}"${a.id === selectedId ? ' selected' : ''}>${escapeHtml(accountLabel(a))}</option>`).join('');
+  html += `<option value="__new_account__">+ Yeni banka hesabı ekle…</option>`;
+  return html;
+}
+function accountLabel(a) {
+  if (!a) return '—';
+  const tail = a.iban ? ' · ****' + String(a.iban).replace(/\s+/g, '').slice(-4) : '';
+  return `${a.bank || ''}${a.owner ? ' · ' + a.owner : ''}${tail}`.trim() || 'Hesap';
+}
+function getAccountById(id) { return (store.accounts || []).find(a => a.id === id); }
 // Bir formun yöntem alanını (prefix) verilen değerlerle doldurur
-function setMethod(prefix, method, bank) {
+function setMethod(prefix, method, bank, accountId) {
   method = method === 'banka' ? 'banka' : 'nakit';
   document.querySelectorAll('#' + prefix + 'MethodSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.method === method));
-  document.getElementById(prefix + 'Bank').innerHTML = buildBankOptions(bank || '');
+  // Eski kayıtta yalnız bank adı varsa o bankaya ait ilk hesabı önermeye çalış
+  let id = accountId || '';
+  if (!id && bank) {
+    const guess = (store.accounts || []).find(a => a.bank === bank);
+    if (guess) id = guess.id;
+  }
+  document.getElementById(prefix + 'Bank').innerHTML = buildAccountOptions(id);
   document.getElementById(prefix + 'BankField').style.display = method === 'banka' ? '' : 'none';
 }
-// Formdan {method, bank?} okur
+// Formdan {method, bank, accountId} okur
 function getMethod(prefix) {
   const active = document.querySelector('#' + prefix + 'MethodSeg .seg-btn.active');
   const method = active && active.dataset.method === 'banka' ? 'banka' : 'nakit';
   if (method !== 'banka') return { method: 'nakit' };
   const v = document.getElementById(prefix + 'Bank').value;
-  return { method: 'banka', bank: (v && v !== '__manage__') ? v : '' };
+  if (!v || v === '__new_account__') return { method: 'banka', bank: '', accountId: '' };
+  const acc = getAccountById(v);
+  return { method: 'banka', bank: acc ? (acc.bank || '') : '', accountId: v };
 }
 function initMethodField(prefix) {
   document.querySelectorAll('#' + prefix + 'MethodSeg .seg-btn').forEach(b => b.addEventListener('click', () => {
@@ -3077,10 +3194,20 @@ function initMethodField(prefix) {
     document.getElementById(prefix + 'BankField').style.display = b.dataset.method === 'banka' ? '' : 'none';
   }));
   const sel = document.getElementById(prefix + 'Bank');
-  sel.addEventListener('change', () => { if (sel.value === '__manage__') openBanks(); });
+  sel.addEventListener('change', () => {
+    if (sel.value === '__new_account__') {
+      sel.value = '';
+      openAccountForm(null, prefix);
+    }
+  });
 }
 // Görünüm yardımcıları
-function methodText(o) { if (!o || !o.method) return ''; return o.method === 'banka' ? (o.bank || 'Banka') : 'Nakit'; }
+function methodText(o) {
+  if (!o || !o.method) return '';
+  if (o.method !== 'banka') return 'Nakit';
+  if (o.accountId) { const a = getAccountById(o.accountId); if (a) return accountLabel(a); }
+  return o.bank || 'Banka';
+}
 function methodPill(o) { const t = methodText(o); return t ? `<span class="pill">${escapeHtml(t)}</span>` : ''; }
 
 // Para birimi + TL karşılığı alanı (TL karşılığı tarihten otomatik gelir, elle de girilebilir)
@@ -3846,7 +3973,7 @@ function openTxSheet(mode, existingTx = null) {
   document.getElementById('txDue').value = existingTx && existingTx.dueDate ? existingTx.dueDate : '';
   document.getElementById('txNote').value = existingTx && existingTx.note ? existingTx.note : '';
   document.getElementById('txDueField').style.display = isDebt ? '' : 'none';
-  setMethod('tx', existingTx ? existingTx.method : 'nakit', existingTx ? existingTx.bank : '');
+  setMethod('tx', existingTx ? existingTx.method : 'nakit', existingTx ? existingTx.bank : '', existingTx ? existingTx.accountId : '');
   document.getElementById('txHint').style.display = 'none';
 
   scrimTx.classList.add('open');
@@ -3943,13 +4070,16 @@ document.getElementById('txSave').addEventListener('click', async () => {
     tx.amount = amount; tx.date = date; tx.note = note;
     tx.cur = cf.cur; tx.try = tryVal;
     tx.method = m.method; tx.bank = m.bank || '';
+    if (m.accountId) tx.accountId = m.accountId; else delete tx.accountId;
     if (type === 'debt') {
       tx.dueDate = dueDate;
       if (snapshot && (!tx.snapshot || tx.snapshot.requestedDate !== date)) tx.snapshot = snapshot;
     }
     toast('Güncellendi', 'success');
   } else {
-    const tx = { id: uid(), type, amount, date, note, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' };
+    const kind = type === 'debt' ? 'borc' : 'odeme';
+    const tx = { id: uid(), type, kind, amount, date, note, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' };
+    if (m.accountId) tx.accountId = m.accountId;
     if (type === 'debt') { tx.dueDate = dueDate; tx.snapshot = snapshot; }
     c.txs = c.txs || [];
     c.txs.push(tx);
@@ -4048,11 +4178,12 @@ function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); ren
 // ============ SETTINGS ============
 function renderSettings() {
   document.getElementById('setCardsCnt').textContent = (store.cards || []).length;
+  document.getElementById('setAccountsCnt').textContent = (store.accounts || []).length;
   document.getElementById('setBanksCnt').textContent = (banks || []).length;
   document.getElementById('setSubCatsCnt').textContent = (typeof subcats !== 'undefined' ? subcats : []).length;
   document.getElementById('setIncCatsCnt').textContent = (typeof inccats !== 'undefined' ? inccats : []).length;
-  // Kart listesi modal açıksa onu da yenile
   if (scrimCards && scrimCards.classList.contains('open')) renderCardList();
+  if (scrimAccounts && scrimAccounts.classList.contains('open')) renderAccountList();
 }
 // ============ CARDS LIST SHEET ============
 const scrimCards = document.getElementById('scrimCards');
@@ -4089,6 +4220,7 @@ document.getElementById('cardsAdd').addEventListener('click', () => openCardForm
 scrimCards.addEventListener('click', e => { if (e.target === scrimCards) closeCardsList(); });
 
 document.getElementById('setOpenCards').addEventListener('click', openCardsList);
+document.getElementById('setOpenAccounts').addEventListener('click', openAccountsList);
 document.getElementById('setOpenBanks').addEventListener('click', () => openBanks());
 document.getElementById('setOpenFaiz').addEventListener('click', () => openRates());
 document.getElementById('setOpenSubCats').addEventListener('click', () => openCats('sub'));
@@ -4225,6 +4357,187 @@ document.getElementById('cdAddStmt').addEventListener('click', () => {
     sel.value = id;
     updateDebtHint();
   }, 200);
+});
+
+// ============ BANK ACCOUNTS ============
+const scrimAccounts = document.getElementById('scrimAccounts');
+const scrimAccountForm = document.getElementById('scrimAccountForm');
+const scrimAccountDetail = document.getElementById('scrimAccountDetail');
+let editingAccountId = null;
+let accountFormReturnPrefix = null;  // Form formla açıldıysa hangi method prefix
+let currentAccountId = null;
+
+function renderAccountList() {
+  const list = document.getElementById('accountList');
+  if (!list) return;
+  const accs = (store.accounts || []).slice().sort((a, b) => (a.bank + a.owner).localeCompare(b.bank + b.owner, 'tr'));
+  if (accs.length === 0) {
+    list.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:18px 0;text-align:center;">Henüz banka hesabı yok. Aşağıdaki + Hesap ekle düğmesinden başla.</div>`;
+    return;
+  }
+  list.innerHTML = accs.map(a => {
+    const moveCnt = accountMovements(a.id).length;
+    const tail = a.iban ? '****' + String(a.iban).replace(/\s+/g, '').slice(-4) : 'IBAN —';
+    return `<div class="card-item" data-aid="${a.id}">
+      <div class="card-tag">${cardTag({ bank: a.bank, name: a.owner })}</div>
+      <div class="card-main">
+        <div class="card-name">${escapeHtml(a.bank || '')}${a.owner ? ' · ' + escapeHtml(a.owner) : ''}</div>
+        <div class="card-sub">${escapeHtml(tail)} · ${moveCnt} hareket</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.card-item').forEach(el => el.addEventListener('click', () => openAccountDetail(el.dataset.aid)));
+}
+function openAccountsList() { renderAccountList(); scrimAccounts.classList.add('open'); }
+function closeAccountsList() { scrimAccounts.classList.remove('open'); }
+document.getElementById('accountsClose').addEventListener('click', closeAccountsList);
+document.getElementById('accountsDone').addEventListener('click', closeAccountsList);
+document.getElementById('accountsAdd').addEventListener('click', () => openAccountForm(null));
+scrimAccounts.addEventListener('click', e => { if (e.target === scrimAccounts) closeAccountsList(); });
+
+function openAccountForm(id, returnPrefix) {
+  editingAccountId = id;
+  accountFormReturnPrefix = returnPrefix || null;
+  const a = id ? getAccountById(id) : null;
+  document.getElementById('accountFormTitle').innerHTML = a ? 'Hesabı <em>düzenle</em>' : 'Yeni <em>banka hesabı</em>';
+  document.getElementById('aBank').innerHTML = buildBankOptions(a ? a.bank : '');
+  document.getElementById('aOwner').value = a ? (a.owner || '') : '';
+  document.getElementById('aIban').value = a ? (a.iban || '') : '';
+  document.getElementById('accountFormDelete').style.display = a ? '' : 'none';
+  scrimAccountForm.classList.add('open');
+  setTimeout(() => document.getElementById('aOwner').focus(), 250);
+}
+function closeAccountForm() { scrimAccountForm.classList.remove('open'); editingAccountId = null; accountFormReturnPrefix = null; }
+document.getElementById('accountFormClose').addEventListener('click', closeAccountForm);
+document.getElementById('accountFormCancel').addEventListener('click', closeAccountForm);
+scrimAccountForm.addEventListener('click', e => { if (e.target === scrimAccountForm) closeAccountForm(); });
+document.getElementById('aBank').addEventListener('change', function() {
+  if (this.value === '__manage__') openBanks();
+});
+document.getElementById('accountFormSave').addEventListener('click', () => {
+  const bank = document.getElementById('aBank').value;
+  const owner = document.getElementById('aOwner').value.trim();
+  const iban = document.getElementById('aIban').value.trim();
+  if (!bank || bank === '__manage__') { toast('Banka seç', 'error'); return; }
+  if (!owner) { toast('Hesap sahibi gerekli', 'error'); return; }
+  const prefix = accountFormReturnPrefix;
+  let savedId = editingAccountId;
+  if (editingAccountId) {
+    const a = getAccountById(editingAccountId);
+    if (a) { a.bank = bank; a.owner = owner; a.iban = iban; }
+    toast('Güncellendi', 'success');
+  } else {
+    savedId = uid();
+    store.accounts.push({ id: savedId, bank, owner, iban, createdAt: Date.now() });
+    toast('Hesap eklendi', 'success');
+  }
+  persist(); refresh(); closeAccountForm();
+  // Bir form üzerinden eklendiyse, o formun picker'ına seçili olarak düşür
+  if (prefix) {
+    const sel = document.getElementById(prefix + 'Bank');
+    if (sel) sel.innerHTML = buildAccountOptions(savedId);
+  }
+});
+document.getElementById('accountFormDelete').addEventListener('click', () => {
+  if (!editingAccountId) return;
+  const links = accountMovements(editingAccountId).length;
+  if (links > 0) {
+    if (!confirm(`Bu hesapla ilişkili ${links} kayıt var. Yine de silinsin mi? (Kayıtlar kalır, hesap bağlantısı kopar)`)) return;
+    // Bağlantıları temizle
+    (store.contacts || []).forEach(c => (c.txs || []).forEach(t => { if (t.accountId === editingAccountId) delete t.accountId; }));
+    (store.debts || []).forEach(d => {
+      if (d.accountId === editingAccountId) delete d.accountId;
+      (d.payments || []).forEach(p => { if (p.accountId === editingAccountId) delete p.accountId; });
+    });
+    (store.subs || []).forEach(s => { if (s.accountId === editingAccountId) delete s.accountId; });
+    (store.incomes || []).forEach(s => { if (s.accountId === editingAccountId) delete s.accountId; });
+  }
+  store.accounts = (store.accounts || []).filter(x => x.id !== editingAccountId);
+  persist(); refresh(); closeAccountForm();
+  toast('Hesap silindi', 'success');
+});
+
+// Account hareketleri: bu hesabı referans alan tüm kayıtları topla
+function accountMovements(aid) {
+  const out = [];
+  (store.contacts || []).forEach(c => (c.txs || []).forEach(t => {
+    if (t.accountId === aid) {
+      const isOut = t.type === 'debt';
+      out.push({
+        date: t.date, amount: (isOut ? -1 : 1) * (Number(t.try || t.amount) || 0),
+        label: c.name + ' · ' + (isOut ? 'borç verildi' : 'ödeme alındı'),
+        source: 'tx', srcId: c.id
+      });
+    }
+  }));
+  (store.debts || []).forEach(d => {
+    if (d.accountId === aid && d.startDate) {
+      out.push({
+        date: d.startDate, amount: Number(d.totalTry || d.total || (d.amount * (d.count || 1))) || 0,
+        label: (debtName(d) || 'Borç') + ' · alındı',
+        source: 'debt', srcId: d.id
+      });
+    }
+    (d.payments || []).forEach(p => {
+      if (p.accountId === aid) {
+        out.push({
+          date: p.date, amount: -(Number(p.amount) || 0),
+          label: (debtName(d) || 'Borç') + ' · ödeme',
+          source: 'debt-pay', srcId: d.id
+        });
+      }
+    });
+  });
+  (store.subs || []).forEach(s => { if (s.accountId === aid) out.push({ date: s.startDate || todayISO(), amount: 0, label: s.name + ' · abonelik (bağlı)', source: 'sub', srcId: s.id, info: true }); });
+  (store.incomes || []).forEach(s => { if (s.accountId === aid) out.push({ date: s.startDate || todayISO(), amount: 0, label: s.name + ' · düzenli gelir (bağlı)', source: 'inc', srcId: s.id, info: true }); });
+  out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return out;
+}
+
+function openAccountDetail(id) {
+  currentAccountId = id;
+  renderAccountDetail();
+  scrimAccountDetail.classList.add('open');
+}
+function renderAccountDetail() {
+  const a = getAccountById(currentAccountId);
+  if (!a) return;
+  document.getElementById('adTag').textContent = cardTag({ bank: a.bank, name: a.owner });
+  document.getElementById('adTitle').textContent = `${a.bank || ''}${a.owner ? ' · ' + a.owner : ''}`;
+  document.getElementById('adSub').textContent = 'Banka hesabı';
+  const ibanWrap = document.getElementById('adIbanWrap');
+  ibanWrap.innerHTML = a.iban ? `IBAN: ${escapeHtml(a.iban)}` : 'IBAN girilmemiş';
+  const moves = accountMovements(a.id);
+  document.getElementById('adMoveCnt').textContent = moves.length + ' kayıt';
+  const host = document.getElementById('adMovements');
+  if (moves.length === 0) {
+    host.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:14px 0;text-align:center;">Bu hesaba bağlı hareket yok.</div>`;
+    return;
+  }
+  host.innerHTML = moves.map(m => {
+    const sign = m.amount > 0 ? '+' : (m.amount < 0 ? '−' : '');
+    const cls = m.amount > 0 ? 'in' : (m.amount < 0 ? 'out' : 'flat');
+    const amtTxt = m.info ? '—' : (sign + fmtTL(Math.abs(m.amount)));
+    return `<div class="card-item" data-src="${m.source}" data-sid="${m.srcId}">
+      <div class="card-tag" style="background:${m.amount > 0 ? 'var(--forest)' : (m.amount < 0 ? 'var(--red)' : 'var(--muted)')};">${m.amount > 0 ? '↓' : (m.amount < 0 ? '↑' : '·')}</div>
+      <div class="card-main">
+        <div class="card-name">${escapeHtml(m.label)}</div>
+        <div class="card-sub">${m.date ? fmtDateShort(m.date) : '—'}</div>
+      </div>
+      <div class="card-amt">
+        <div class="card-amt-t" style="color:${m.amount > 0 ? 'var(--forest)' : (m.amount < 0 ? 'var(--red)' : 'var(--muted)')};">${amtTxt}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function closeAccountDetail() { scrimAccountDetail.classList.remove('open'); currentAccountId = null; }
+document.getElementById('accountDetailClose').addEventListener('click', closeAccountDetail);
+document.getElementById('accountDetailDone').addEventListener('click', closeAccountDetail);
+scrimAccountDetail.addEventListener('click', e => { if (e.target === scrimAccountDetail) closeAccountDetail(); });
+document.getElementById('adEdit').addEventListener('click', () => {
+  const id = currentAccountId;
+  closeAccountDetail();
+  openAccountForm(id);
 });
 
 // ============ SUBSCRIPTIONS (abonelikler) ============
@@ -4370,7 +4683,7 @@ function openSubForm(id) {
   setVarType(s && s.variable ? 'variable' : 'fixed');
   document.getElementById('sCategory').innerHTML = buildCatOptions(s ? s.category : '');
   document.getElementById('sNote').value = s && s.note ? s.note : '';
-  setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
+  setMethod('sub', s ? (s.method || 'banka') : 'banka', s ? s.bank : '', s ? s.accountId : '');
   document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.plan === ((s && s.inPlan) ? 'yes' : 'no')));
   document.getElementById('subDelete').style.display = s ? '' : 'none';
   const tog = document.getElementById('subToggle');
@@ -4429,7 +4742,7 @@ document.getElementById('subSave').addEventListener('click', () => {
   }
   const m = getMethod('sub');
   const inPlan = !!document.querySelector('#subPlanSeg .seg-btn.active[data-plan="yes"]');
-  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', inPlan, variable, actuals: variable ? actuals : {} };
+  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', accountId: m.accountId || '', inPlan, variable, actuals: variable ? actuals : {} };
   if (editingSubId) {
     const s = store.subs.find(x => x.id === editingSubId);
     if (s) Object.assign(s, fields);
@@ -4701,7 +5014,7 @@ function openIncomeForm(id) {
   setIncVar(s && s.variable ? 'variable' : 'fixed');
   document.getElementById('iCategory').innerHTML = buildCatOptions(s ? s.category : '', inccats);
   document.getElementById('iNote').value = s && s.note ? s.note : '';
-  setMethod('inc', s ? (s.method || 'banka') : 'banka', s ? s.bank : '');
+  setMethod('inc', s ? (s.method || 'banka') : 'banka', s ? s.bank : '', s ? s.accountId : '');
   document.getElementById('incDelete').style.display = s ? '' : 'none';
   const tog = document.getElementById('incToggle');
   if (s) { tog.style.display = ''; tog.textContent = s.active === false ? 'Devam ettir' : 'Durdur'; }
@@ -4737,7 +5050,7 @@ document.getElementById('incSave').addEventListener('click', () => {
   const actuals = {};
   if (variable) document.querySelectorAll('#iActuals .iact-in').forEach(inp => { const v = parseFloat(inp.value); if (!isNaN(v)) actuals[inp.dataset.m] = v; });
   const m = getMethod('inc');
-  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', variable, actuals: variable ? actuals : {} };
+  const fields = { name, company, amount, day, term, startDate: fixed ? startDate : null, category, note, method: m.method, bank: m.bank || '', accountId: m.accountId || '', variable, actuals: variable ? actuals : {} };
   if (editingIncomeId) {
     const s = store.incomes.find(x => x.id === editingIncomeId);
     if (s) Object.assign(s, fields);
@@ -5414,7 +5727,7 @@ function openDebtForm(id) {
   // Kart picker doldur
   rebuildCardPicker(isCardD ? d.cardId : '');
   dCurF.set(d && !isCardD ? d.cur : 'TRY', d && !isCardD && d.total != null ? d.total : '', d && !isCardD ? d.totalTry : null);
-  setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
+  setMethod('d', d ? d.method : 'nakit', d ? d.bank : '', d ? d.accountId : '');
   document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && (d.category === 'loan' || d.category === 'card') ? (d.bank || '') : '');
   dPlan = d ? (d.plan || 'installment') : 'installment';
   updateDebtTitleLabel();
@@ -5517,6 +5830,7 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     const planChanged = d.plan !== fields.plan;
     d.category = category; d.title = title; d.note = note; d.startDate = startDate;
     d.method = m.method; d.bank = m.bank || '';
+    if (m.accountId) d.accountId = m.accountId; else delete d.accountId;
     if (snapshot && (!d.snapshot || d.snapshot.requestedDate !== startDate)) d.snapshot = snapshot;
     if (fields.plan === 'installment') {
       d.plan = 'installment'; d.amount = fields.amount; d.count = fields.count; d.firstDate = fields.firstDate;
@@ -5533,6 +5847,7 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     toast('Güncellendi', 'success');
   } else {
     const base = { id: uid(), category, title, note, startDate, snapshot, method: m.method, bank: m.bank || '', createdAt: Date.now() };
+    if (m.accountId) base.accountId = m.accountId;
     if (fields.plan === 'installment') Object.assign(base, fields, { paidIdx: [] });
     else Object.assign(base, fields, { payments: [] });
     store.debts.push(base);
@@ -6133,7 +6448,7 @@ function openDebtPay(payId) {
   document.getElementById('debtPayDelete').style.display = p ? '' : 'none';
   document.getElementById('dpDate').value = p ? p.date : todayISO();
   dpCurF.set(p ? p.cur : 'TRY', p ? p.amount : '', p ? p.try : null);
-  setMethod('dp', p ? p.method : 'nakit', p ? p.bank : '');
+  setMethod('dp', p ? p.method : 'nakit', p ? p.bank : '', p ? p.accountId : '');
   scrimDebtPay.classList.add('open');
   setTimeout(() => document.getElementById('dpAmount').focus(), 250);
 }
@@ -6158,14 +6473,20 @@ document.getElementById('debtPaySave').addEventListener('click', () => {
   d.payments = d.payments || [];
   if (editingPayId) {
     const p = d.payments.find(x => x.id === editingPayId);
-    if (p) { p.amount = amount; p.date = date; p.cur = cf.cur; p.try = tryVal; p.method = m.method; p.bank = m.bank || ''; }
+    if (p) {
+      p.amount = amount; p.date = date; p.cur = cf.cur; p.try = tryVal;
+      p.method = m.method; p.bank = m.bank || '';
+      if (m.accountId) p.accountId = m.accountId; else delete p.accountId;
+    }
     toast('Ödeme güncellendi', 'success');
   } else {
     const rem = debtTotals(d).remaining;
     if (tryVal > rem + 0.01) {
       if (!confirm(`Ödeme (${fmtTL(tryVal)}) kalan borçtan (${fmtTL(rem)}) fazla. Devam edilsin mi?`)) return;
     }
-    d.payments.push({ id: uid(), amount, date, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' });
+    const pay = { id: uid(), amount, date, cur: cf.cur, try: tryVal, method: m.method, bank: m.bank || '' };
+    if (m.accountId) pay.accountId = m.accountId;
+    d.payments.push(pay);
     toast('Ödeme eklendi', 'success');
   }
   persist(); renderDebtDetail(d); renderSummary(); renderDebts(); closeDebtPay();
