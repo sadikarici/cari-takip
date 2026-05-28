@@ -3482,11 +3482,27 @@ function deleteTx(txid) {
 }
 
 // ============ NET SUMMARY + MODE ============
+// Tik'lenen plan kalemlerinin toplam tutarı (borç toplamından düşülür)
+function paidLogDebtTotal() {
+  const log = store.paidLog || {};
+  let sum = 0;
+  (store.debts || []).forEach(d => {
+    if (d.plan === 'installment') {
+      debtSchedule(d).forEach(s => { if (!s.paid && log[`inst:${d.id}:${s.index}`]) sum += s.amount; });
+    } else {
+      const rem = debtTotals(d).remaining;
+      if (rem > 0.01 && log[`flat:${d.id}`]) sum += rem;
+    }
+  });
+  return sum;
+}
 function renderSummary() {
   let recv = 0;
   (store.contacts || []).forEach(c => { recv += contactTotals(c).balance; });
-  let debt = 0;
-  (store.debts || []).forEach(d => { debt += debtTotals(d).remaining; });
+  let debtRaw = 0;
+  (store.debts || []).forEach(d => { debtRaw += debtTotals(d).remaining; });
+  const paid = paidLogDebtTotal();
+  const debt = Math.max(0, debtRaw - paid);
   const net = recv - debt;
 
   document.getElementById('netTotal').textContent =
@@ -3996,6 +4012,7 @@ function renderMonthPlan() {
       store.paidLog = store.paidLog || {};
       if (store.paidLog[k]) delete store.paidLog[k]; else store.paidLog[k] = true;
       persist();
+      renderSummary();
       renderDetail(label, its);
     }));
   }
