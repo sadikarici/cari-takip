@@ -1213,13 +1213,19 @@
   .mp-hint { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--faint); text-align: center; margin-top: 8px; }
   .mp-detail { margin-top: 14px; }
   .mp-detail:empty { display: none; }
-  .mp-detail-head { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
-  .mp-item { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid var(--hair); }
+  .mp-detail-head { display: flex; justify-content: space-between; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+  .mp-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--hair); }
   .mp-item:first-of-type { border-top: none; }
-  .mp-item-l { min-width: 0; }
+  .mp-item-l { min-width: 0; flex: 1; }
   .mp-item-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mp-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 1px; }
   .mp-item-amt { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; white-space: nowrap; }
+  .mp-chip { width: 24px; height: 24px; font-size: 10px; flex-shrink: 0; }
+  .cat-chip.sub { background: var(--ochre-bg); color: var(--ochre); border-color: var(--ochre-bg); }
+  .mp-tick { width: 22px; height: 22px; flex-shrink: 0; border: 1.5px solid var(--hair-2); background: var(--paper); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: transparent; padding: 0; }
+  .mp-tick.checked { border-color: var(--forest); background: var(--forest); color: var(--paper); }
+  .mp-item.paid .mp-item-name { text-decoration: line-through; color: var(--muted); }
+  .mp-item.paid .mp-item-amt { color: var(--muted); }
   .per-row {
     display: flex;
     justify-content: space-between;
@@ -2271,6 +2277,7 @@ function load() {
   if (!store.debts) store.debts = [];
   if (!store.subs) store.subs = [];
   if (!store.incomes) store.incomes = [];
+  if (!store.paidLog) store.paidLog = {};
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
     if (d.plan === 'installment' && !d.paidIdx) d.paidIdx = [];
@@ -3901,11 +3908,14 @@ function renderMonthPlan() {
   if (!host) return;
   const items = [];
   (store.debts || []).forEach(d => {
+    const cat = DEBT_CATS[d.category] || DEBT_CATS.loan;
+    const chip = cat.short;
+    const cls = d.category || 'loan';
     if (d.plan === 'installment') {
-      debtSchedule(d).forEach(s => { if (!s.paid) items.push({ date: s.dueDate, amount: s.amount, name: debtName(d) }); });
+      debtSchedule(d).forEach(s => { if (!s.paid) items.push({ date: s.dueDate, amount: s.amount, name: debtName(d), chip, cls, key: `inst:${d.id}:${s.index}` }); });
     } else {
       const rem = debtTotals(d).remaining;
-      if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d) });
+      if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d), chip, cls, key: `flat:${d.id}` });
     }
   });
   const activeSubs = (store.subs || []).filter(s => s.active !== false && s.inPlan && (Number(s.amount) || 0) > 0 && (!(s.term > 0) || subEndMonth(s) >= todayISO().slice(0, 7)));
@@ -3932,7 +3942,7 @@ function renderMonthPlan() {
   // Bir ayın tüm kalemleri: o aydaki borç ödemeleri + aktif abonelikler
   const monthItems = m => {
     const list = buckets[m] ? buckets[m].items.slice() : [];
-    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true }); });
+    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true, chip: 'A', cls: 'sub', key: `sub:${s.id}:${m}` }); });
     return list;
   };
   const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
@@ -3952,8 +3962,15 @@ function renderMonthPlan() {
     if (m.slice(0, 4) !== todayM.slice(0, 4)) s += " '" + m.slice(2, 4);
     return s;
   };
-  const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it =>
-    `<div class="mp-item"><div class="mp-item-l"><div class="mp-item-name">${escapeHtml(it.name)}</div><div class="mp-item-date">${fmtDateShort(it.date)}${it.sub ? ' · abonelik' : ''}</div></div><div class="mp-item-amt">${fmtTL(it.amount)}</div></div>`).join('');
+  const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it => {
+    const paid = !!(it.key && store.paidLog && store.paidLog[it.key]);
+    return `<div class="mp-item ${paid ? 'paid' : ''}">
+      <button type="button" class="mp-tick ${paid ? 'checked' : ''}" data-pkey="${it.key || ''}" aria-label="ödendi">✓</button>
+      <div class="cat-chip ${it.cls || ''} mp-chip">${it.chip || '·'}</div>
+      <div class="mp-item-l"><div class="mp-item-name">${escapeHtml(it.name)}</div><div class="mp-item-date">${fmtDateShort(it.date)}${it.sub ? ' · abonelik' : ''}</div></div>
+      <div class="mp-item-amt">${fmtTL(it.amount)}</div>
+    </div>`;
+  }).join('');
 
   let html = `<div class="mp-box"><div class="mp-title">Aylık ödeme planı</div>`;
   if (overdueTotal > 0.01) html += `<div class="mp-overdue" data-key="ov"><span>⚠ Gecikmiş ödemeler</span><strong>${fmtTL(overdueTotal)}</strong></div>`;
@@ -3967,12 +3984,27 @@ function renderMonthPlan() {
 
   const detail = document.getElementById('mpDetail');
   let sel = '';
+  function renderDetail(label, its) {
+    const paid = its.reduce((sum, it) => sum + (it.key && store.paidLog && store.paidLog[it.key] ? it.amount : 0), 0);
+    const remaining = its.reduce((sum, it) => sum + it.amount, 0) - paid;
+    const head = `<div class="mp-detail-head"><span>${label} dökümü</span><span>ödenen ${fmtTL(paid)} · kalan ${fmtTL(remaining)}</span></div>`;
+    detail.innerHTML = head + itemsHtml(its);
+    detail.querySelectorAll('.mp-tick').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = btn.dataset.pkey;
+      if (!k) return;
+      store.paidLog = store.paidLog || {};
+      if (store.paidLog[k]) delete store.paidLog[k]; else store.paidLog[k] = true;
+      persist();
+      renderDetail(label, its);
+    }));
+  }
   function pick(key, label, its, el) {
     host.querySelectorAll('.mp-tile, .mp-overdue').forEach(x => x.classList.remove('active'));
     if (sel === key) { sel = ''; detail.innerHTML = ''; return; }
     sel = key;
     if (el && el.classList.contains('mp-tile')) el.classList.add('active');
-    detail.innerHTML = `<div class="mp-detail-head">${label} dökümü</div>` + itemsHtml(its);
+    renderDetail(label, its);
   }
   host.querySelectorAll('.mp-tile').forEach(t =>
     t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), monthItems(t.dataset.key), t)));
