@@ -2253,6 +2253,7 @@ let store = { contacts: [], debts: [] };
 let filter = 'active';
 let mode = 'receivables'; // 'receivables' | 'debts' | 'subs'
 let acctSubtab = 'accounts'; // 'accounts' | 'incomes'
+let mpSel = ''; // aylık plan detayında seçili ay anahtarı
 let debtFilter = 'active';
 let dPlan = 'installment'; // borç formu: 'installment' | 'flat'
 let editingRates = { yasal: [], avans: [] };
@@ -3482,27 +3483,11 @@ function deleteTx(txid) {
 }
 
 // ============ NET SUMMARY + MODE ============
-// Tik'lenen plan kalemlerinin toplam tutarı (borç toplamından düşülür)
-function paidLogDebtTotal() {
-  const log = store.paidLog || {};
-  let sum = 0;
-  (store.debts || []).forEach(d => {
-    if (d.plan === 'installment') {
-      debtSchedule(d).forEach(s => { if (!s.paid && log[`inst:${d.id}:${s.index}`]) sum += s.amount; });
-    } else {
-      const rem = debtTotals(d).remaining;
-      if (rem > 0.01 && log[`flat:${d.id}`]) sum += rem;
-    }
-  });
-  return sum;
-}
 function renderSummary() {
   let recv = 0;
   (store.contacts || []).forEach(c => { recv += contactTotals(c).balance; });
-  let debtRaw = 0;
-  (store.debts || []).forEach(d => { debtRaw += debtTotals(d).remaining; });
-  const paid = paidLogDebtTotal();
-  const debt = Math.max(0, debtRaw - paid);
+  let debt = 0;
+  (store.debts || []).forEach(d => { debt += debtTotals(d).remaining; });
   const net = recv - debt;
 
   document.getElementById('netTotal').textContent =
@@ -3923,15 +3908,23 @@ function renderMonthPlan() {
   const host = document.getElementById('monthPlan');
   if (!host) return;
   const items = [];
+  const plog = store.paidLog || {};
   (store.debts || []).forEach(d => {
     const cat = DEBT_CATS[d.category] || DEBT_CATS.loan;
     const chip = cat.short;
     const cls = d.category || 'loan';
     if (d.plan === 'installment') {
-      debtSchedule(d).forEach(s => { if (!s.paid) items.push({ date: s.dueDate, amount: s.amount, name: debtName(d), chip, cls, key: `inst:${d.id}:${s.index}` }); });
-    } else {
+      debtSchedule(d).forEach(s => {
+        items.push({ date: s.dueDate, amount: s.amount, name: debtName(d), chip, cls, key: `inst:${d.id}:${s.index}`, paid: !!s.paid });
+      });
+    } else if (d.dueDate) {
+      const tick = plog[`flat:${d.id}`];
       const rem = debtTotals(d).remaining;
-      if (rem > 0.01 && d.dueDate) items.push({ date: d.dueDate, amount: rem, name: debtName(d), chip, cls, key: `flat:${d.id}` });
+      if (tick && typeof tick === 'object') {
+        items.push({ date: d.dueDate, amount: Number(tick.amt) || 0, name: debtName(d), chip, cls, key: `flat:${d.id}`, paid: true });
+      } else if (rem > 0.01) {
+        items.push({ date: d.dueDate, amount: rem, name: debtName(d), chip, cls, key: `flat:${d.id}`, paid: false });
+      }
     }
   });
   const activeSubs = (store.subs || []).filter(s => s.active !== false && s.inPlan && (Number(s.amount) || 0) > 0 && (!(s.term > 0) || subEndMonth(s) >= todayISO().slice(0, 7)));
@@ -3958,7 +3951,7 @@ function renderMonthPlan() {
   // Bir ayın tüm kalemleri: o aydaki borç ödemeleri + aktif abonelikler
   const monthItems = m => {
     const list = buckets[m] ? buckets[m].items.slice() : [];
-    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true, chip: 'A', cls: 'sub', key: `sub:${s.id}:${m}` }); });
+    activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true, chip: 'A', cls: 'sub', key: `sub:${s.id}:${m}`, paid: !!(store.paidLog && store.paidLog[`sub:${s.id}:${m}`]) }); });
     return list;
   };
   const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
@@ -3979,7 +3972,7 @@ function renderMonthPlan() {
     return s;
   };
   const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it => {
-    const paid = !!(it.key && store.paidLog && store.paidLog[it.key]);
+    const paid = !!it.paid;
     return `<div class="mp-item ${paid ? 'paid' : ''}">
       <button type="button" class="mp-tick ${paid ? 'checked' : ''}" data-pkey="${it.key || ''}" aria-label="ödendi">✓</button>
       <div class="cat-chip ${it.cls || ''} mp-chip">${it.chip || '·'}</div>
@@ -3999,27 +3992,21 @@ function renderMonthPlan() {
   host.innerHTML = html;
 
   const detail = document.getElementById('mpDetail');
-  let sel = '';
   function renderDetail(label, its) {
-    const paid = its.reduce((sum, it) => sum + (it.key && store.paidLog && store.paidLog[it.key] ? it.amount : 0), 0);
+    const paid = its.reduce((sum, it) => sum + (it.paid ? it.amount : 0), 0);
     const remaining = its.reduce((sum, it) => sum + it.amount, 0) - paid;
     const head = `<div class="mp-detail-head"><span>${label} dökümü</span><span>ödenen ${fmtTL(paid)} · kalan ${fmtTL(remaining)}</span></div>`;
     detail.innerHTML = head + itemsHtml(its);
     detail.querySelectorAll('.mp-tick').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
       const k = btn.dataset.pkey;
-      if (!k) return;
-      store.paidLog = store.paidLog || {};
-      if (store.paidLog[k]) delete store.paidLog[k]; else store.paidLog[k] = true;
-      persist();
-      renderSummary();
-      renderDetail(label, its);
+      if (k) togglePaidItem(k);
     }));
   }
   function pick(key, label, its, el) {
     host.querySelectorAll('.mp-tile, .mp-overdue').forEach(x => x.classList.remove('active'));
-    if (sel === key) { sel = ''; detail.innerHTML = ''; return; }
-    sel = key;
+    if (mpSel === key) { mpSel = ''; detail.innerHTML = ''; return; }
+    mpSel = key;
     if (el && el.classList.contains('mp-tile')) el.classList.add('active');
     renderDetail(label, its);
   }
@@ -4027,6 +4014,52 @@ function renderMonthPlan() {
     t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), monthItems(t.dataset.key), t)));
   const ov = host.querySelector('.mp-overdue');
   if (ov) ov.addEventListener('click', () => pick('ov', 'Gecikmiş', overdueItems, ov));
+  // Yeni render sonrası önceki seçimi geri aç
+  if (mpSel) {
+    const target = mpSel === 'ov' ? ov : host.querySelector(`.mp-tile[data-key="${mpSel}"]`);
+    if (target) {
+      target.classList.add('active');
+      const its = mpSel === 'ov' ? overdueItems : monthItems(mpSel);
+      const label = mpSel === 'ov' ? 'Gecikmiş' : monthLabel(mpSel);
+      renderDetail(label, its);
+    } else {
+      mpSel = '';
+    }
+  }
+}
+// Tikleme: kaleme göre gerçek borç kaydını günceller
+function togglePaidItem(key) {
+  store.paidLog = store.paidLog || {};
+  if (key.startsWith('inst:')) {
+    const [, did, idxStr] = key.split(':');
+    const d = store.debts.find(x => x.id === did);
+    if (!d) return;
+    const idx = parseInt(idxStr, 10);
+    d.paidIdx = d.paidIdx || [];
+    const pos = d.paidIdx.indexOf(idx);
+    if (pos >= 0) d.paidIdx.splice(pos, 1); else { d.paidIdx.push(idx); d.paidIdx.sort((a, b) => a - b); }
+  } else if (key.startsWith('flat:')) {
+    const did = key.split(':')[1];
+    const d = store.debts.find(x => x.id === did);
+    if (!d) return;
+    d.payments = d.payments || [];
+    const tick = store.paidLog[key];
+    if (tick && typeof tick === 'object') {
+      d.payments = d.payments.filter(p => p.id !== tick.pid);
+      delete store.paidLog[key];
+    } else {
+      const amt = debtTotals(d).remaining;
+      if (amt > 0) {
+        const p = { id: uid(), amount: amt, date: d.dueDate || todayISO() };
+        d.payments.push(p);
+        store.paidLog[key] = { pid: p.id, amt };
+      }
+    }
+  } else if (key.startsWith('sub:')) {
+    if (store.paidLog[key]) delete store.paidLog[key]; else store.paidLog[key] = true;
+  }
+  persist();
+  refresh();
 }
 
 function renderDebts() {
