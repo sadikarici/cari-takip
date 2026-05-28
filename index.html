@@ -4051,8 +4051,22 @@ function setItemAmount(key, amount) {
     const d = store.debts.find(x => x.id === did);
     if (!d) return;
     const idx = parseInt(idxStr, 10);
+    const base = Number(d.amount) || 0;
     d.amounts = d.amounts || {};
-    if (Math.abs(amount - Number(d.amount)) < 0.001) delete d.amounts[idx]; else d.amounts[idx] = amount;
+    const cur = d.amounts[idx] != null ? Number(d.amounts[idx]) : base;
+    const delta = amount - cur;
+    if (Math.abs(amount - base) < 0.001) delete d.amounts[idx]; else d.amounts[idx] = amount;
+    // Eksik/fazla tutar bir sonraki ödenmemiş taksite kaydırılır (toplam korunur)
+    if (Math.abs(delta) > 0.001) {
+      const paidIdx = d.paidIdx || [];
+      let next = -1;
+      for (let j = idx + 1; j < d.count; j++) { if (!paidIdx.includes(j)) { next = j; break; } }
+      if (next >= 0) {
+        const cur2 = d.amounts[next] != null ? Number(d.amounts[next]) : base;
+        const newNext = cur2 - delta;
+        if (Math.abs(newNext - base) < 0.001) delete d.amounts[next]; else d.amounts[next] = newNext;
+      }
+    }
     if (!Object.keys(d.amounts).length) delete d.amounts;
   } else if (key.startsWith('flat:')) {
     const did = key.split(':')[1];
