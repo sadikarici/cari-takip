@@ -1410,6 +1410,7 @@
   .mp-item-amt:active { color: var(--muted); }
   .mp-chip { width: 24px; height: 24px; font-size: 10px; flex-shrink: 0; }
   .cat-chip.sub { background: var(--ochre-bg); color: var(--ochre); border-color: var(--ochre-bg); }
+  .cat-chip.income { background: var(--forest-bg); color: var(--forest); border-color: var(--forest-bg); }
   .mp-tick { width: 22px; height: 22px; flex-shrink: 0; border: 1.5px solid var(--hair-2); background: var(--paper); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: transparent; padding: 0; }
   .mp-tick.checked { border-color: var(--forest); background: var(--forest); color: var(--paper); }
   .mp-item.paid .mp-item-name { text-decoration: line-through; color: var(--muted); }
@@ -1579,6 +1580,7 @@
       <div class="debt-list" id="contactList"></div>
     </div>
     <div id="aPanelIncomes" style="display:none;">
+      <div id="incPlan"></div>
       <!-- Toplam gelir özet kartı -->
       <div class="debt-summary">
         <div class="debt-sum-label">Toplam aylık gelir</div>
@@ -4458,7 +4460,150 @@ document.getElementById('subToggle').addEventListener('click', () => {
 
 // ============ DÜZENLİ GELİRLER ============
 const scrimIncome = document.getElementById('scrimIncome');
+let incSel = '';
+// Düzenli gelirler için ay ay tahsilat planı (aylık ödeme planının gelir versiyonu)
+function renderIncomePlan() {
+  const host = document.getElementById('incPlan');
+  if (!host) return;
+  const plog = store.paidLog || {};
+  const todayM = todayISO().slice(0, 7);
+  const items = [];
+
+  (store.incomes || []).forEach(s => {
+    if (s.active === false) return;
+    const start = subStartMonth(s);
+    const months = [];
+    if (s.term > 0) {
+      for (let i = 0; i < s.term; i++) months.push(monthKeyAdd(start, i));
+    } else {
+      for (let i = -6; i <= 12; i++) {
+        const mm = monthKeyAdd(todayM, i);
+        if (mm >= start) months.push(mm);
+      }
+    }
+    months.forEach(m => {
+      if (!subChargesInMonth(s, m)) return;
+      const key = `inc:${s.id}:${m}`;
+      const paid = !!plog[key];
+      const expected = subAmountForMonth(s, m);
+      const partList = (s.partials && Array.isArray(s.partials[m]) ? s.partials[m] : []).map(p => ({ id: p.id || 'legacy', amount: Number(p.amount) || 0, date: p.date || '' }));
+      const partial = paid ? 0 : partList.reduce((a, p) => a + p.amount, 0);
+      const [y, mo] = m.split('-').map(Number);
+      const lastDay = new Date(y, mo, 0).getDate();
+      const date = `${m}-${String(Math.min(s.day || 1, lastDay)).padStart(2, '0')}`;
+      items.push({ date, amount: expected, name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), chip: 'G', cls: 'income', key, paid, partial, partList });
+    });
+  });
+
+  if (!items.length) { host.innerHTML = ''; return; }
+
+  const buckets = {};
+  items.forEach(it => {
+    const m = it.date.slice(0, 7);
+    if (!buckets[m]) buckets[m] = { items: [] };
+    buckets[m].items.push(it);
+  });
+
+  const monthItems = m => buckets[m] ? buckets[m].items.slice() : [];
+  const monthTotal = m => monthItems(m).reduce((sum, it) => sum + (it.paid ? 0 : (it.amount - (it.partial || 0))), 0);
+
+  const allM = Object.keys(buckets).sort();
+  const next12 = Array.from({ length: 12 }, (_, i) => monthKeyAdd(todayM, i));
+  const showMonths = [...new Set([...allM, ...next12])].sort();
+
+  const overdueMonths = allM.filter(m => m < todayM);
+  const overdueItems = overdueMonths.flatMap(m => buckets[m].items);
+  const overdueTotal = overdueItems.reduce((s, it) => s + (it.paid ? 0 : (it.amount - (it.partial || 0))), 0);
+
+  const monthLabel = m => {
+    let s = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long' });
+    if (m.slice(0, 4) !== todayM.slice(0, 4)) s += " '" + m.slice(2, 4);
+    return s;
+  };
+  const itemsHtml = its => its.slice().sort((a, b) => a.date.localeCompare(b.date)).map(it => {
+    const paid = !!it.paid;
+    const part = !paid && (it.partial || 0) > 0.01 ? Number(it.partial) : 0;
+    const cls = paid ? 'paid' : (part ? 'partial' : '');
+    const partList = (!paid && Array.isArray(it.partList)) ? it.partList : [];
+    const payRows = partList.length
+      ? `<div class="mp-pay-list">` + partList.map(p =>
+          `<div class="mp-pay-row"><span class="pay-text">${p.date ? fmtDateShort(p.date) : 'tarih ―'} · <b>${fmtTL(p.amount)}</b></span><button type="button" class="mp-pay-x" data-cancel-key="${it.key}" data-pay-id="${escapeHtml(String(p.id))}" aria-label="iptal" title="kısmi tahsilatı sil">×</button></div>`
+        ).join('') + `</div>`
+      : '';
+    const payFoot = part ? `<div class="mp-item-pay">${fmtTL(part)} alındı · ${fmtTL(it.amount - part)} kaldı</div>` : '';
+    return `<div class="mp-item ${cls}">
+      <button type="button" class="mp-tick ${paid ? 'checked' : ''}" data-pkey="${it.key || ''}" aria-label="alındı">✓</button>
+      <div class="cat-chip ${it.cls || ''} mp-chip">${it.chip || '·'}</div>
+      <div class="mp-item-l"><div class="mp-item-name">${escapeHtml(it.name)}</div><div class="mp-item-date">${fmtDateShort(it.date)} · gelir</div>${payRows}${payFoot}</div>
+      <div class="mp-item-amt" data-akey="${it.key || ''}" data-amt="${it.amount}" data-partial="${part}" title="Tutara dokun">${fmtTL(it.amount)}</div>
+    </div>`;
+  }).join('');
+
+  let html = `<div class="mp-box"><div class="mp-title">Aylık tahsilat planı</div>`;
+  if (overdueTotal > 0.01) html += `<div class="mp-overdue" data-key="ov"><span>⚠ Geciken tahsilatlar</span><strong>${fmtTL(overdueTotal)}</strong></div>`;
+  if (showMonths.length) {
+    html += `<div class="mp-grid">` + showMonths.map(m =>
+      `<div class="mp-tile" data-key="${m}"><div class="mp-tile-month">${monthLabel(m)}</div><div class="mp-tile-total">${fmtTL(monthTotal(m))}</div></div>`).join('') + `</div>`;
+    html += `<div class="mp-hint">← aylar arasında kaydır · ay seçince dökümü açılır →</div>`;
+  }
+  html += `<div class="mp-detail" id="incDetail"></div></div>`;
+  host.innerHTML = html;
+
+  const detail = document.getElementById('incDetail');
+  function renderDetail(label, its) {
+    const paidSum = its.reduce((sum, it) => sum + (it.paid ? it.amount : (it.partial || 0)), 0);
+    const remaining = its.reduce((sum, it) => sum + it.amount, 0) - paidSum;
+    const head = `<div class="mp-detail-head"><span>${label} dökümü</span><span>alınan ${fmtTL(paidSum)} · kalan ${fmtTL(remaining)}</span></div>`;
+    detail.innerHTML = head + itemsHtml(its);
+    detail.querySelectorAll('.mp-tick').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = btn.dataset.pkey;
+      if (k) togglePaidItem(k);
+    }));
+    detail.querySelectorAll('.mp-item-amt').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = el.dataset.akey;
+      if (!k) return;
+      const cur = Number(el.dataset.amt) || 0;
+      const part = Number(el.dataset.partial) || 0;
+      const item = its.find(x => x.key === k);
+      const name = item ? item.name : '';
+      openPartialDialog(k, cur, part, name, item ? item.date : '');
+    }));
+    detail.querySelectorAll('.mp-pay-x').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = btn.dataset.cancelKey;
+      const pid = btn.dataset.payId;
+      if (!k || !pid) return;
+      cancelPartial(k, pid);
+    }));
+  }
+  function pick(key, label, its, el) {
+    host.querySelectorAll('.mp-tile, .mp-overdue').forEach(x => x.classList.remove('active'));
+    if (incSel === key) { incSel = ''; detail.innerHTML = ''; return; }
+    incSel = key;
+    if (el && el.classList.contains('mp-tile')) el.classList.add('active');
+    renderDetail(label, its);
+  }
+  host.querySelectorAll('.mp-tile').forEach(t =>
+    t.addEventListener('click', () => pick(t.dataset.key, monthLabel(t.dataset.key), monthItems(t.dataset.key), t)));
+  const ov = host.querySelector('.mp-overdue');
+  if (ov) ov.addEventListener('click', () => pick('ov', 'Geciken', overdueItems, ov));
+  if (incSel) {
+    const target = incSel === 'ov' ? ov : host.querySelector(`.mp-tile[data-key="${incSel}"]`);
+    if (target) {
+      target.classList.add('active');
+      const its = incSel === 'ov' ? overdueItems : monthItems(incSel);
+      const label = incSel === 'ov' ? 'Geciken' : monthLabel(incSel);
+      renderDetail(label, its);
+    } else {
+      incSel = '';
+    }
+  }
+}
+
 function renderIncomes() {
+  renderIncomePlan();
   const incs = store.incomes || [];
   const todayM = todayISO().slice(0, 7);
   const ongoing = incs.filter(subOngoing);
@@ -4840,7 +4985,7 @@ function setItemAmount(key, amount) {
     if (!d) return;
     d.total = amount;
     if (d.totalTry != null) d.totalTry = amount;
-  } else if (key.startsWith('sub:')) {
+  } else if (key.startsWith('sub:') || key.startsWith('inc:')) {
     const [, sid, m] = key.split(':');
     const ent = (store.subs || []).find(x => x.id === sid) || (store.incomes || []).find(x => x.id === sid);
     if (!ent) return;
@@ -4895,9 +5040,31 @@ function partialPayFlat(key, amount, date) {
   persist();
   refresh();
 }
+// Tekrarlı kalem (abonelik/gelir) için kısmi ödeme: ent.partials[m] dizisine ekler
+function partialPaySub(key, amount, date) {
+  const [, sid, m] = key.split(':');
+  const ent = (store.subs || []).find(x => x.id === sid) || (store.incomes || []).find(x => x.id === sid);
+  if (!ent) return;
+  const expected = subAmountForMonth(ent, m);
+  ent.partials = ent.partials || {};
+  let list;
+  if (Array.isArray(ent.partials[m])) list = ent.partials[m].slice();
+  else list = [];
+  const alreadyPaid = list.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const cap = Math.max(0, expected - alreadyPaid);
+  const amt = Math.max(0, Math.min(cap, Number(amount) || 0));
+  if (amt < 0.01) { toast('Kısmi tutar girin', 'error'); return; }
+  list.push({ id: uid(), amount: amt, date: date || todayISO() });
+  ent.partials[m] = list;
+  // Tam ödendi işareti varsa kaldır
+  if (store.paidLog && store.paidLog[key]) delete store.paidLog[key];
+  persist();
+  refresh();
+}
 function addPartial(key, amount, date) {
   if (key.startsWith('inst:')) return partialPayInst(key, amount, date);
   if (key.startsWith('flat:')) return partialPayFlat(key, amount, date);
+  if (key.startsWith('inc:') || key.startsWith('sub:')) return partialPaySub(key, amount, date);
 }
 // Kısmi ödeme kaydını sil
 function cancelPartialInst(key, payId) {
@@ -4929,9 +5096,23 @@ function cancelPartialFlat(key, payId) {
   refresh();
   toast('Kısmi ödeme silindi', 'success');
 }
+function cancelPartialSub(key, payId) {
+  const [, sid, m] = key.split(':');
+  const ent = (store.subs || []).find(x => x.id === sid) || (store.incomes || []).find(x => x.id === sid);
+  if (!ent || !ent.partials || !Array.isArray(ent.partials[m])) return;
+  const before = ent.partials[m].length;
+  ent.partials[m] = ent.partials[m].filter(p => String(p.id) !== String(payId));
+  if (ent.partials[m].length === before) return;
+  if (ent.partials[m].length === 0) delete ent.partials[m];
+  if (!Object.keys(ent.partials).length) delete ent.partials;
+  persist();
+  refresh();
+  toast('Kısmi ödeme silindi', 'success');
+}
 function cancelPartial(key, payId) {
   if (key.startsWith('inst:')) return cancelPartialInst(key, payId);
   if (key.startsWith('flat:')) return cancelPartialFlat(key, payId);
+  if (key.startsWith('inc:') || key.startsWith('sub:')) return cancelPartialSub(key, payId);
 }
 // Devir: ödenen tutar kadarı bu taksite alınır (ödendi), kalan sonraki ödenmemiş taksite eklenir
 function carryOverInst(key, amount) {
@@ -4997,7 +5178,7 @@ function togglePaidItem(key) {
         store.paidLog[key] = { pid: p.id, amt };
       }
     }
-  } else if (key.startsWith('sub:')) {
+  } else if (key.startsWith('sub:') || key.startsWith('inc:')) {
     if (store.paidLog[key]) delete store.paidLog[key]; else store.paidLog[key] = true;
   }
   persist();
@@ -5849,12 +6030,13 @@ function ppApplyMode() {
   const inp = document.getElementById('ppAmount');
   const dateField = document.getElementById('ppDateField');
   if (ppCtx.mode === 'partial') {
-    lbl.textContent = 'Ödenen tutar (₺)';
+    lbl.textContent = ppCtx.isInc ? 'Alınan tutar (₺)' : 'Ödenen tutar (₺)';
     inp.value = '';
     dateField.style.display = '';
     document.getElementById('ppDate').value = todayISO();
     const remaining = ppCtx.cur - ppCtx.partial;
-    help.innerHTML = `Bu kayıt yeni bir satır olarak eklenir; kalan <b>${fmtTL(remaining)}</b> bu taksitte borç olarak kalır. Toplam borç aynı kalır.`;
+    if (ppCtx.isInc) help.innerHTML = `Bu tahsilat yeni bir satır olarak eklenir; kalan <b>${fmtTL(remaining)}</b> bu ay alacak olarak kalır.`;
+    else help.innerHTML = `Bu kayıt yeni bir satır olarak eklenir; kalan <b>${fmtTL(remaining)}</b> bu taksitte borç olarak kalır. Toplam borç aynı kalır.`;
   } else if (ppCtx.mode === 'carry') {
     lbl.textContent = 'Ödenen tutar (₺)';
     inp.value = '';
@@ -5869,14 +6051,18 @@ function ppApplyMode() {
 }
 function openPartialDialog(key, cur, partial, name, date) {
   const isFlat = key.startsWith('flat:');
-  ppCtx = { key, cur: Number(cur) || 0, partial: Number(partial) || 0, mode: 'partial', name: name || '', date: date || '', flat: isFlat };
+  const isInst = key.startsWith('inst:');
+  const isInc = key.startsWith('inc:');
+  ppCtx = { key, cur: Number(cur) || 0, partial: Number(partial) || 0, mode: 'partial', name: name || '', date: date || '', flat: isFlat, isInc };
   document.getElementById('ppTitle').textContent = (name ? name + ' · ' : '') + fmtTL(ppCtx.cur);
-  const sub = date ? fmtDateShort(date) + (isFlat ? ' borcu' : ' taksiti') : (isFlat ? 'Borç' : 'Taksit');
+  const sub = date
+    ? fmtDateShort(date) + (isInc ? ' tahsilatı' : (isFlat ? ' borcu' : ' taksiti'))
+    : (isInc ? 'Tahsilat' : (isFlat ? 'Borç' : 'Taksit'));
   document.getElementById('ppSub').textContent = sub;
-  // Devir, sadece taksitli borçlar için anlamlı; ayrıca sonraki ödenmemiş taksit gerek
+  // Devir yalnızca taksitli (inst) borçlar için anlamlı
   const carryBtn = document.querySelector('.pp-mode[data-pp="carry"]');
   if (carryBtn) {
-    if (isFlat) { carryBtn.disabled = true; carryBtn.style.display = 'none'; }
+    if (!isInst) { carryBtn.disabled = true; carryBtn.style.display = 'none'; }
     else { carryBtn.style.display = ''; carryBtn.disabled = !ppHasNextUnpaid(key); }
   }
   if (carryBtn && carryBtn.disabled && ppCtx.mode === 'carry') ppCtx.mode = 'partial';
@@ -5898,7 +6084,8 @@ document.getElementById('ppAmount').addEventListener('input', () => {
   const help = document.getElementById('ppHelp');
   const v = parseFloat(document.getElementById('ppAmount').value) || 0;
   const remainingAfter = Math.max(0, ppCtx.cur - ppCtx.partial - v);
-  help.innerHTML = `Bu kayıt yeni bir satır olarak eklenir; kalan <b>${fmtTL(remainingAfter)}</b> bu taksitte borç olarak kalır. Toplam borç aynı kalır.`;
+  if (ppCtx.isInc) help.innerHTML = `Bu tahsilat yeni bir satır olarak eklenir; kalan <b>${fmtTL(remainingAfter)}</b> bu ay alacak olarak kalır.`;
+  else help.innerHTML = `Bu kayıt yeni bir satır olarak eklenir; kalan <b>${fmtTL(remainingAfter)}</b> bu taksitte borç olarak kalır. Toplam borç aynı kalır.`;
 });
 document.getElementById('ppSave').addEventListener('click', () => {
   if (!ppCtx) return;
@@ -5906,10 +6093,10 @@ document.getElementById('ppSave').addEventListener('click', () => {
   if (isNaN(v) || v < 0) { toast('Geçerli tutar girin', 'error'); return; }
   if (ppCtx.mode === 'partial') {
     const cap = ppCtx.cur - ppCtx.partial;
-    if (v > cap + 0.001) { toast('Tutar kalan borçtan büyük olamaz', 'error'); return; }
+    if (v > cap + 0.001) { toast(ppCtx.isInc ? 'Tutar kalandan büyük olamaz' : 'Tutar kalan borçtan büyük olamaz', 'error'); return; }
     const dateVal = document.getElementById('ppDate').value || todayISO();
     addPartial(ppCtx.key, v, dateVal);
-    toast('Kısmi ödeme eklendi', 'success');
+    toast(ppCtx.isInc ? 'Kısmi tahsilat eklendi' : 'Kısmi ödeme eklendi', 'success');
   } else if (ppCtx.mode === 'carry') {
     if (v > ppCtx.cur + 0.001) { toast('Ödenen tutar taksitten büyük olamaz', 'error'); return; }
     carryOverInst(ppCtx.key, v);
