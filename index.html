@@ -63,8 +63,84 @@
     max-width: 640px;
     margin: 0 auto;
     min-height: 100vh;
-    padding-bottom: calc(100px + var(--safe-bot));
+    padding-bottom: calc(160px + var(--safe-bot));
   }
+
+  /* ============ BOTTOM NAV ============ */
+  .bnav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    background: var(--paper);
+    border-top: 1px solid var(--hair);
+    padding: 6px 4px calc(6px + var(--safe-bot)) 4px;
+    z-index: 25;
+    gap: 2px;
+  }
+  .bnav-shell { max-width: 640px; width: 100%; margin: 0 auto; display: flex; gap: 2px; }
+  .bnav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    padding: 8px 4px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .bnav-btn.active { color: var(--ink); background: var(--paper-2); }
+  .bnav-ic { width: 22px; height: 22px; display: block; }
+  .bnav-ic svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ============ SETTINGS VIEW ============ */
+  .set-section { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 14px; margin-bottom: 14px; }
+  .set-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .set-section-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .set-section-title em { font-style: normal; color: var(--muted); font-weight: 500; }
+  .set-section-action { background: none; border: 1px solid var(--hair-2); border-radius: 100px; padding: 4px 11px; font-family: inherit; font-size: 11px; color: var(--ink); cursor: pointer; }
+  .set-section-action:active { background: var(--paper); }
+  .set-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--hair); cursor: pointer; }
+  .set-row:first-of-type { border-top: none; }
+  .set-row-l { flex: 1; min-width: 0; }
+  .set-row-t { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; color: var(--ink); }
+  .set-row-s { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .set-row-r { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+  .set-row-arrow { width: 14px; height: 14px; color: var(--faint); }
+
+  /* ============ CARD LIST ============ */
+  .card-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--hair); cursor: pointer; }
+  .card-item:first-of-type { border-top: none; }
+  .card-tag { width: 38px; height: 38px; border-radius: var(--r-md); background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; flex-shrink: 0; text-transform: uppercase; }
+  .card-main { flex: 1; min-width: 0; }
+  .card-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted); margin-top: 2px; letter-spacing: 0.02em; }
+  .card-amt { text-align: right; }
+  .card-amt-t { font-family: 'IBM Plex Serif', serif; font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+  .card-amt-s { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.02em; }
+
+  /* Card detail stats */
+  .card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .card-stat { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 11px 10px; }
+  .card-stat-l { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .card-stat-v { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; color: var(--ink); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-stat.ok .card-stat-v { color: var(--forest); }
+  .card-meter { height: 6px; background: var(--paper-2); border-radius: 100px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--hair); }
+  .card-meter-fill { height: 100%; background: var(--ink); transition: width 0.3s; }
+  .card-meter-fill.warn { background: var(--ochre); }
+  .card-meter-fill.bad { background: var(--red); }
 
   /* ============ TOP BAR ============ */
   .topbar {
@@ -347,7 +423,7 @@
   /* ============ FAB ============ */
   .fab-wrap {
     position: fixed;
-    bottom: calc(20px + var(--safe-bot));
+    bottom: calc(82px + var(--safe-bot));
     left: 0; right: 0;
     display: flex;
     justify-content: center;
@@ -1356,11 +1432,8 @@
   </div>
 
   <!-- MODE TABS -->
-  <div class="modetabs">
-    <button class="modetab active" data-mode="receivables">Alacaklarım<span class="cnt" id="mtRecv">0</span></button>
-    <button class="modetab" data-mode="debts">Borçlarım<span class="cnt" id="mtDebt">0</span></button>
-    <button class="modetab" data-mode="subs">Abonelikler<span class="cnt" id="mtSub">0</span></button>
-  </div>
+  <!-- üst sekmelere artık alt navigasyon var; sayım göstergeleri gizli kalır -->
+  <span id="mtRecv" hidden>0</span><span id="mtDebt" hidden>0</span><span id="mtSub" hidden>0</span>
 
   <!-- VIEW: RECEIVABLES (alacaklar) -->
   <div id="viewReceivables">
@@ -1435,8 +1508,73 @@
     <div class="contact-list" id="subList"></div>
   </div>
 
+  <!-- VIEW: SETTINGS (ayarlar) -->
+  <div id="viewSettings" style="display:none;">
+    <div class="set-section">
+      <div class="set-section-head">
+        <div class="set-section-title">Kredi <em>kartlarım</em></div>
+        <button class="set-section-action" id="setAddCard">+ Kart ekle</button>
+      </div>
+      <div id="cardList"></div>
+    </div>
+    <div class="set-section">
+      <div class="set-section-head">
+        <div class="set-section-title">Genel <em>ayarlar</em></div>
+      </div>
+      <div class="set-row" id="setOpenBanks">
+        <div class="set-row-l">
+          <div class="set-row-t">Bankalar</div>
+          <div class="set-row-s">banka listesini düzenle</div>
+        </div>
+        <div class="set-row-r" id="setBanksCnt">0</div>
+      </div>
+      <div class="set-row" id="setOpenFaiz">
+        <div class="set-row-l">
+          <div class="set-row-t">Faiz oranları</div>
+          <div class="set-row-s">yasal · avans dönemsel oranlar</div>
+        </div>
+      </div>
+      <div class="set-row" id="setOpenSubCats">
+        <div class="set-row-l">
+          <div class="set-row-t">Abonelik kategorileri</div>
+          <div class="set-row-s">kategori ekle/sil</div>
+        </div>
+        <div class="set-row-r" id="setSubCatsCnt">0</div>
+      </div>
+      <div class="set-row" id="setOpenIncCats">
+        <div class="set-row-l">
+          <div class="set-row-t">Gelir kategorileri</div>
+          <div class="set-row-s">kategori ekle/sil</div>
+        </div>
+        <div class="set-row-r" id="setIncCatsCnt">0</div>
+      </div>
+    </div>
+  </div>
+
   <div class="foot">· · ·</div>
 </div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <div class="bnav-shell">
+    <button class="bnav-btn active" data-mode="receivables">
+      <span class="bnav-ic"><svg viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M5 20h14"/></svg></span>
+      <span>Alacaklarım</span>
+    </button>
+    <button class="bnav-btn" data-mode="debts">
+      <span class="bnav-ic"><svg viewBox="0 0 24 24"><path d="M12 20V8m0 0l-4 4m4-4l4 4M5 4h14"/></svg></span>
+      <span>Borçlarım</span>
+    </button>
+    <button class="bnav-btn" data-mode="subs">
+      <span class="bnav-ic"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-16 5.66M3 12a9 9 0 0 1 16-5.66M21 4v6h-6M3 20v-6h6"/></svg></span>
+      <span>Abonelikler</span>
+    </button>
+    <button class="bnav-btn" data-mode="settings">
+      <span class="bnav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span>Ayarlar</span>
+    </button>
+  </div>
+</nav>
 
 <!-- FAB -->
 <div class="fab-wrap">
@@ -1675,7 +1813,7 @@
           <option value="personal">Şahıstan borç</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="dTitleRow">
         <div style="display:flex;gap:10px;">
           <div id="dLoanBankWrap" style="display:none;flex:1;min-width:0;">
             <label class="field-label">Banka</label>
@@ -1686,6 +1824,10 @@
             <input type="text" class="field-input" id="dTitle" placeholder="Örn: Garanti İhtiyaç Kredisi" autocomplete="off">
           </div>
         </div>
+      </div>
+      <div class="field" id="dCardPickRow" style="display:none;">
+        <label class="field-label">Kredi kartı *</label>
+        <select class="field-input" id="dCardPick"></select>
       </div>
       <div class="field" id="dPlanField">
         <label class="field-label">Ödeme şekli</label>
@@ -1728,15 +1870,9 @@
         </div>
       </div>
       <div id="dCardFields" style="display:none;">
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Borç tutarı (₺) *</label>
-            <input type="number" class="field-input" id="dCardDebt" placeholder="0" inputmode="decimal" step="0.01">
-          </div>
-          <div class="field">
-            <label class="field-label">Kart limiti (₺)</label>
-            <input type="number" class="field-input" id="dCardLimit" placeholder="0" inputmode="decimal" step="0.01">
-          </div>
+        <div class="field">
+          <label class="field-label">Borç tutarı (₺) *</label>
+          <input type="number" class="field-input" id="dCardDebt" placeholder="0" inputmode="decimal" step="0.01">
         </div>
       </div>
       <div class="field-row">
@@ -1959,6 +2095,90 @@
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="ratesCancel">Vazgeç</button>
       <button class="btn btn-primary" id="ratesSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CARD FORM SHEET ============ -->
+<div class="scrim" id="scrimCardForm">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="cardFormTitle">Yeni <em>kredi kartı</em></div>
+        <div class="sheet-sub">Banka · sahibi · limit</div>
+      </div>
+      <button class="sheet-close" id="cardFormClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-row">
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Banka *</label>
+          <select class="field-input" id="kBank"></select>
+        </div>
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Kart adı *</label>
+          <input type="text" class="field-input" id="kName" placeholder="Örn: Axess Platinum" autocomplete="off">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Kart sahibi</label>
+          <input type="text" class="field-input" id="kOwner" placeholder="Örn: Sadık" autocomplete="off">
+        </div>
+        <div class="field" style="flex:1;min-width:0;">
+          <label class="field-label">Kart limiti (₺) *</label>
+          <input type="number" class="field-input" id="kLimit" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="cardFormDelete" style="display:none;">Sil</button>
+      <button class="btn btn-ghost" id="cardFormCancel">Vazgeç</button>
+      <button class="btn btn-primary" id="cardFormSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CARD DETAIL SHEET ============ -->
+<div class="scrim" id="scrimCardDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="account-head">
+      <div class="account-identity">
+        <div class="card-tag" id="cdTag" style="width:44px;height:44px;font-size:11px;">KK</div>
+        <div style="flex:1; min-width:0;">
+          <div class="account-name" id="cdTitle">—</div>
+          <div class="account-contact" id="cdSub">—</div>
+        </div>
+        <button class="sheet-close" id="cardDetailClose" aria-label="Kapat"></button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div class="card-stats">
+        <div class="card-stat">
+          <div class="card-stat-l">Limit</div>
+          <div class="card-stat-v" id="cdLimit">—</div>
+        </div>
+        <div class="card-stat">
+          <div class="card-stat-l">Kullanılan</div>
+          <div class="card-stat-v" id="cdUsed">—</div>
+        </div>
+        <div class="card-stat ok">
+          <div class="card-stat-l">Kullanılabilir</div>
+          <div class="card-stat-v" id="cdAvail">—</div>
+        </div>
+      </div>
+      <div class="card-meter"><div class="card-meter-fill" id="cdMeter" style="width:0%;"></div></div>
+      <div class="section-head">
+        <div class="section-title">Hesap <em>kesimleri</em></div>
+        <button class="set-section-action" id="cdAddStmt">+ Yeni borç</button>
+      </div>
+      <div id="cdStatements"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="cdEdit">Kartı düzenle</button>
+      <button class="btn btn-primary" id="cardDetailDone">Kapat</button>
     </div>
   </div>
 </div>
@@ -2334,11 +2554,31 @@ function load() {
   if (!store.debts) store.debts = [];
   if (!store.subs) store.subs = [];
   if (!store.incomes) store.incomes = [];
+  if (!store.cards) store.cards = [];
   if (!store.paidLog) store.paidLog = {};
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
     if (d.plan === 'installment' && !d.paidIdx) d.paidIdx = [];
     if (d.plan === 'flat' && !d.payments) d.payments = [];
+  });
+  // Migration: mevcut kredi kartı borçları için kart varlıkları üret
+  const byKey = {};
+  store.cards.forEach(c => { byKey[(c.bank || '').toLowerCase() + '|' + (c.name || '').toLowerCase()] = c; });
+  store.debts.forEach(d => {
+    if (d.category === 'card' && !d.cardId) {
+      const bank = d.bank || '';
+      const name = d.title || 'Kart';
+      const k = bank.toLowerCase() + '|' + name.toLowerCase();
+      let card = byKey[k];
+      if (!card) {
+        card = { id: uid(), bank, name, owner: '', limit: d.limit != null ? Number(d.limit) : 0 };
+        store.cards.push(card);
+        byKey[k] = card;
+      } else if (d.limit != null && Number(d.limit) > (card.limit || 0)) {
+        card.limit = Number(d.limit);
+      }
+      d.cardId = card.id;
+    }
   });
 }
 function persist() { localStorage.setItem(KEY, JSON.stringify(store)); }
@@ -3052,6 +3292,7 @@ function closeContactForm() { scrimContact.classList.remove('open'); editingCont
 document.getElementById('fabAdd').addEventListener('click', () => {
   if (mode === 'debts') openDebtForm();
   else if (mode === 'subs') openSubForm();
+  else if (mode === 'settings') openCardForm(null);
   else if (mode === 'receivables' && acctSubtab === 'incomes') openIncomeForm();
   else openContactForm();
 });
@@ -3584,6 +3825,7 @@ function renderSummary() {
 function fabLabelFor() {
   if (mode === 'debts') return 'Yeni borç';
   if (mode === 'subs') return 'Yeni abonelik';
+  if (mode === 'settings') return 'Yeni kart';
   return acctSubtab === 'incomes' ? 'Yeni gelir' : 'Yeni cari hesap';
 }
 function setMode(m) {
@@ -3591,10 +3833,12 @@ function setMode(m) {
   document.getElementById('viewReceivables').style.display = m === 'receivables' ? '' : 'none';
   document.getElementById('viewDebts').style.display = m === 'debts' ? '' : 'none';
   document.getElementById('viewSubs').style.display = m === 'subs' ? '' : 'none';
-  document.querySelectorAll('.modetab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+  document.getElementById('viewSettings').style.display = m === 'settings' ? '' : 'none';
+  document.querySelectorAll('.bnav-btn').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
   document.getElementById('fabLabel').textContent = fabLabelFor();
+  if (m === 'settings') renderSettings();
 }
-document.querySelectorAll('.modetab').forEach(t => {
+document.querySelectorAll('.bnav-btn').forEach(t => {
   t.addEventListener('click', () => setMode(t.dataset.mode));
 });
 function setAcctSubtab(tab) {
@@ -3607,7 +3851,177 @@ function setAcctSubtab(tab) {
 }
 document.querySelectorAll('#viewReceivables .atab').forEach(t => t.addEventListener('click', () => setAcctSubtab(t.dataset.atab)));
 
-function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); renderIncomes(); }
+function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); renderIncomes(); if (mode === 'settings') renderSettings(); }
+
+// ============ SETTINGS ============
+function renderSettings() {
+  const list = document.getElementById('cardList');
+  if (!list) return;
+  const cards = (store.cards || []).slice().sort((a, b) => (a.bank + a.name).localeCompare(b.bank + b.name, 'tr'));
+  if (cards.length === 0) {
+    list.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:8px 0;">Henüz kart yok. + Kart ekle düğmesinden başla.</div>`;
+  } else {
+    list.innerHTML = cards.map(c => {
+      const used = cardOpenDebt(c);
+      const avail = cardAvailable(c);
+      const limit = Number(c.limit) || 0;
+      return `<div class="card-item" data-cid="${c.id}">
+        <div class="card-tag">${cardTag(c)}</div>
+        <div class="card-main">
+          <div class="card-name">${escapeHtml(c.bank || '')}${c.bank && c.name ? ' · ' : ''}${escapeHtml(c.name || '')}</div>
+          <div class="card-sub">${escapeHtml(c.owner || '—')} · limit ${fmtTL(limit)}</div>
+        </div>
+        <div class="card-amt">
+          <div class="card-amt-t">${fmtTL(avail)}</div>
+          <div class="card-amt-s">kullanılabilir</div>
+        </div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.card-item').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.cid)));
+  }
+  // Bilgi sayaçları
+  document.getElementById('setBanksCnt').textContent = (banks || []).length;
+  document.getElementById('setSubCatsCnt').textContent = (typeof subcats !== 'undefined' ? subcats : []).length;
+  document.getElementById('setIncCatsCnt').textContent = (typeof inccats !== 'undefined' ? inccats : []).length;
+}
+document.getElementById('setAddCard').addEventListener('click', () => openCardForm(null));
+document.getElementById('setOpenBanks').addEventListener('click', () => openBanks());
+document.getElementById('setOpenFaiz').addEventListener('click', () => openRates());
+document.getElementById('setOpenSubCats').addEventListener('click', () => openCats('sub'));
+document.getElementById('setOpenIncCats').addEventListener('click', () => openCats('inc'));
+
+// ============ CARD FORM ============
+const scrimCardForm = document.getElementById('scrimCardForm');
+let editingCardId = null;
+function openCardForm(id) {
+  editingCardId = id;
+  const c = id ? (store.cards || []).find(x => x.id === id) : null;
+  document.getElementById('cardFormTitle').innerHTML = c ? 'Kartı <em>düzenle</em>' : 'Yeni <em>kredi kartı</em>';
+  document.getElementById('kBank').innerHTML = buildBankOptions(c ? c.bank : '');
+  document.getElementById('kName').value = c ? (c.name || '') : '';
+  document.getElementById('kOwner').value = c ? (c.owner || '') : '';
+  document.getElementById('kLimit').value = c && c.limit != null ? c.limit : '';
+  document.getElementById('cardFormDelete').style.display = c ? '' : 'none';
+  scrimCardForm.classList.add('open');
+  setTimeout(() => document.getElementById('kName').focus(), 250);
+}
+function closeCardForm() { scrimCardForm.classList.remove('open'); editingCardId = null; }
+document.getElementById('cardFormClose').addEventListener('click', closeCardForm);
+document.getElementById('cardFormCancel').addEventListener('click', closeCardForm);
+scrimCardForm.addEventListener('click', e => { if (e.target === scrimCardForm) closeCardForm(); });
+document.getElementById('kBank').addEventListener('change', function() {
+  if (this.value === '__manage__') openBanks();
+});
+document.getElementById('cardFormSave').addEventListener('click', () => {
+  const bank = document.getElementById('kBank').value;
+  const name = document.getElementById('kName').value.trim();
+  const owner = document.getElementById('kOwner').value.trim();
+  const limit = parseFloat(document.getElementById('kLimit').value);
+  if (!bank || bank === '__manage__') { toast('Banka seç', 'error'); return; }
+  if (!name) { toast('Kart adı gerekli', 'error'); return; }
+  if (isNaN(limit) || limit < 0) { toast('Geçerli limit girin', 'error'); return; }
+  let savedId = editingCardId;
+  if (editingCardId) {
+    const c = (store.cards || []).find(x => x.id === editingCardId);
+    if (c) { c.bank = bank; c.name = name; c.owner = owner; c.limit = limit; }
+    toast('Güncellendi', 'success');
+  } else {
+    savedId = uid();
+    store.cards.push({ id: savedId, bank, name, owner, limit, createdAt: Date.now() });
+    toast('Kart eklendi', 'success');
+  }
+  persist(); refresh(); closeCardForm();
+  // Borç formu açıksa picker'ı güncelle ve yeni kartı seç
+  if (scrimDebtForm.classList.contains('open')) {
+    rebuildCardPicker(savedId);
+    updateDebtHint();
+  }
+});
+document.getElementById('cardFormDelete').addEventListener('click', () => {
+  if (!editingCardId) return;
+  const linked = (store.debts || []).filter(d => d.cardId === editingCardId).length;
+  if (linked > 0) {
+    if (!confirm(`Bu kartla ilişkili ${linked} borç kaydı var. Yine de silinsin mi? (Borçlar kalır, bağlantı kopar)`)) return;
+    (store.debts || []).forEach(d => { if (d.cardId === editingCardId) delete d.cardId; });
+  }
+  store.cards = (store.cards || []).filter(x => x.id !== editingCardId);
+  persist(); refresh(); closeCardForm();
+  toast('Kart silindi', 'success');
+});
+
+// ============ CARD DETAIL ============
+const scrimCardDetail = document.getElementById('scrimCardDetail');
+let currentCardId = null;
+function openCardDetail(id) {
+  currentCardId = id;
+  renderCardDetail();
+  scrimCardDetail.classList.add('open');
+}
+function renderCardDetail() {
+  const c = (store.cards || []).find(x => x.id === currentCardId);
+  if (!c) return;
+  const used = cardOpenDebt(c);
+  const avail = cardAvailable(c);
+  const limit = Number(c.limit) || 0;
+  document.getElementById('cdTag').textContent = cardTag(c);
+  document.getElementById('cdTitle').textContent = `${c.bank || ''}${c.bank && c.name ? ' · ' : ''}${c.name || ''}`;
+  document.getElementById('cdSub').textContent = (c.owner ? c.owner + ' · ' : '') + 'Kredi kartı';
+  document.getElementById('cdLimit').textContent = fmtTL(limit);
+  document.getElementById('cdUsed').textContent = fmtTL(used);
+  document.getElementById('cdAvail').textContent = fmtTL(avail);
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const m = document.getElementById('cdMeter');
+  m.style.width = pct + '%';
+  m.className = 'card-meter-fill' + (pct >= 90 ? ' bad' : (pct >= 70 ? ' warn' : ''));
+  // Hesap kesimleri
+  const stmts = (store.debts || []).filter(d => d.cardId === c.id).sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+  const host = document.getElementById('cdStatements');
+  if (stmts.length === 0) {
+    host.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:8px 0;">Henüz hesap kesim borcu yok.</div>`;
+  } else {
+    host.innerHTML = stmts.map(d => {
+      const t = debtTotals(d);
+      const settled = t.remaining < 0.01;
+      return `<div class="card-item" data-did="${d.id}">
+        <div class="card-tag" style="background:${settled ? 'var(--forest)' : 'var(--ink)'};">${d.dueDate ? new Date(d.dueDate + 'T00:00:00').toLocaleDateString('tr-TR',{month:'short'}).toUpperCase() : '—'}</div>
+        <div class="card-main">
+          <div class="card-name">${d.dueDate ? fmtDateShort(d.dueDate) : 'tarihsiz'}</div>
+          <div class="card-sub">${settled ? 'kapandı' : (t.paid > 0 ? fmtTL(t.paid) + ' ödendi' : 'açık')}</div>
+        </div>
+        <div class="card-amt">
+          <div class="card-amt-t">${fmtTL(settled ? t.total : t.remaining)}</div>
+          <div class="card-amt-s">${settled ? 'toplam' : 'kalan'}</div>
+        </div>
+      </div>`;
+    }).join('');
+    host.querySelectorAll('.card-item').forEach(el => el.addEventListener('click', () => {
+      closeCardDetail();
+      openDebt(el.dataset.did);
+    }));
+  }
+}
+function closeCardDetail() { scrimCardDetail.classList.remove('open'); currentCardId = null; }
+document.getElementById('cardDetailClose').addEventListener('click', closeCardDetail);
+document.getElementById('cardDetailDone').addEventListener('click', closeCardDetail);
+scrimCardDetail.addEventListener('click', e => { if (e.target === scrimCardDetail) closeCardDetail(); });
+document.getElementById('cdEdit').addEventListener('click', () => {
+  const id = currentCardId;
+  closeCardDetail();
+  openCardForm(id);
+});
+document.getElementById('cdAddStmt').addEventListener('click', () => {
+  const id = currentCardId;
+  closeCardDetail();
+  openDebtForm(null);
+  // Kartı seçili getir
+  setTimeout(() => {
+    document.getElementById('dCategory').value = 'card';
+    applyDebtCategory('card', false);
+    const sel = document.getElementById('dCardPick');
+    sel.value = id;
+    updateDebtHint();
+  }, 200);
+});
 
 // ============ SUBSCRIPTIONS (abonelikler) ============
 const scrimSub = document.getElementById('scrimSub');
@@ -3980,7 +4394,35 @@ document.getElementById('incToggle').addEventListener('click', () => {
 
 // ============ RENDER: DEBT LIST ============
 function debtName(d) {
+  if (d.category === 'card' && d.cardId) {
+    const card = (store.cards || []).find(c => c.id === d.cardId);
+    if (card) return `${card.bank || ''}${card.bank && card.name ? ' - ' : ''}${card.name || ''}`.trim() || 'Kredi Kartı';
+  }
   return (d.category === 'card' || d.category === 'loan') && d.bank ? `${d.bank} - ${d.title}` : d.title;
+}
+function cardOpenDebt(card) {
+  return (store.debts || [])
+    .filter(d => d.cardId === card.id)
+    .reduce((s, d) => s + debtTotals(d).remaining, 0);
+}
+function cardAvailable(card) { return Math.max(0, (Number(card.limit) || 0) - cardOpenDebt(card)); }
+function cardTag(card) {
+  const b = (card.bank || card.name || '?').replace(/[^a-zA-ZçğıöşüÇĞİÖŞÜ]/g, '');
+  return b.slice(0, 2).toUpperCase();
+}
+function rebuildCardPicker(selected) {
+  const sel = document.getElementById('dCardPick');
+  if (!sel) return;
+  const cards = (store.cards || []).slice().sort((a, b) => (a.bank + a.name).localeCompare(b.bank + b.name, 'tr'));
+  let html = '';
+  if (cards.length === 0) html += `<option value="" disabled${!selected ? ' selected' : ''}>Henüz kart yok</option>`;
+  else if (!selected) html += `<option value="" disabled selected>Kart seç...</option>`;
+  html += cards.map(c => {
+    const label = `${c.bank || ''}${c.bank && c.name ? ' - ' : ''}${c.name || ''}`.trim() || 'Kart';
+    return `<option value="${c.id}"${c.id === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('');
+  html += `<option value="__new__">+ Yeni kart ekle...</option>`;
+  sel.innerHTML = html;
 }
 // Yaklaşan ayların toplam ödeme yükü
 function renderMonthPlan() {
@@ -3997,12 +4439,26 @@ function renderMonthPlan() {
         items.push({ date: s.dueDate, amount: s.amount, name: debtName(d), chip, cls, key: `inst:${d.id}:${s.index}`, paid: !!s.paid, partial: s.partial || 0, partList: s.partList || [], hasCarry: !!s.hasCarry });
       });
     } else if (d.dueDate) {
+      const tot = debtTotals(d);
       const tick = plog[`flat:${d.id}`];
-      const rem = debtTotals(d).remaining;
       if (tick && typeof tick === 'object') {
-        items.push({ date: d.dueDate, amount: Number(tick.amt) || 0, name: debtName(d), chip, cls, key: `flat:${d.id}`, paid: true });
-      } else if (rem > 0.01) {
-        items.push({ date: d.dueDate, amount: rem, name: debtName(d), chip, cls, key: `flat:${d.id}`, paid: false });
+        items.push({ date: d.dueDate, amount: Number(tick.amt) || 0, name: debtName(d), chip, cls, key: `flat:${d.id}`, paid: true, partial: 0, partList: [], hasCarry: false });
+      } else if (tot.total > 0.01) {
+        const isPaid = tot.remaining < 0.01;
+        const partList = Array.isArray(d.payments)
+          ? d.payments.map(p => ({ id: p.id || 'legacy', amount: Number(p.amount) || 0, date: p.date || '' }))
+          : [];
+        items.push({
+          date: d.dueDate,
+          amount: tot.total,
+          name: debtName(d),
+          chip, cls,
+          key: `flat:${d.id}`,
+          paid: isPaid,
+          partial: isPaid ? 0 : tot.paid,
+          partList: isPaid ? [] : partList,
+          hasCarry: false
+        });
       }
     }
   });
@@ -4099,7 +4555,7 @@ function renderMonthPlan() {
       const part = Number(el.dataset.partial) || 0;
       const item = its.find(x => x.key === k);
       const name = item ? item.name : '';
-      if (k.startsWith('inst:')) { openPartialDialog(k, cur, part, name, item ? item.date : ''); return; }
+      if (k.startsWith('inst:') || k.startsWith('flat:')) { openPartialDialog(k, cur, part, name, item ? item.date : ''); return; }
       const v = prompt('Tutar (₺):', cur.toFixed(2));
       if (v === null) return;
       const num = parseFloat(v);
@@ -4111,7 +4567,7 @@ function renderMonthPlan() {
       const k = btn.dataset.cancelKey;
       const pid = btn.dataset.payId;
       if (!k || !pid) return;
-      cancelPartialInst(k, pid);
+      cancelPartial(k, pid);
     }));
   }
   function pick(key, label, its, el) {
@@ -4194,6 +4650,26 @@ function partialPayInst(key, amount, date) {
   persist();
   refresh();
 }
+// Flat (tek seferlik/kart) borca kısmi ödeme: d.payments listesine ekler
+function partialPayFlat(key, amount, date) {
+  const did = key.split(':')[1];
+  const d = store.debts.find(x => x.id === did);
+  if (!d || d.plan !== 'flat') return;
+  const tot = debtTotals(d);
+  const cap = Math.max(0, tot.remaining);
+  const amt = Math.max(0, Math.min(cap, Number(amount) || 0));
+  if (amt < 0.01) { toast('Kısmi ödeme için tutar girin', 'error'); return; }
+  d.payments = d.payments || [];
+  d.payments.push({ id: uid(), amount: amt, date: date || todayISO() });
+  // Eski tick kaydı varsa temizle (artık parça ödeme akışı tutuyor)
+  if (store.paidLog && store.paidLog[`flat:${d.id}`]) delete store.paidLog[`flat:${d.id}`];
+  persist();
+  refresh();
+}
+function addPartial(key, amount, date) {
+  if (key.startsWith('inst:')) return partialPayInst(key, amount, date);
+  if (key.startsWith('flat:')) return partialPayFlat(key, amount, date);
+}
 // Kısmi ödeme kaydını sil
 function cancelPartialInst(key, payId) {
   const [, did, idxStr] = key.split(':');
@@ -4212,6 +4688,21 @@ function cancelPartialInst(key, payId) {
   persist();
   refresh();
   toast('Kısmi ödeme silindi', 'success');
+}
+function cancelPartialFlat(key, payId) {
+  const did = key.split(':')[1];
+  const d = store.debts.find(x => x.id === did);
+  if (!d || !Array.isArray(d.payments)) return;
+  const before = d.payments.length;
+  d.payments = d.payments.filter(p => String(p.id) !== String(payId));
+  if (d.payments.length === before) return;
+  persist();
+  refresh();
+  toast('Kısmi ödeme silindi', 'success');
+}
+function cancelPartial(key, payId) {
+  if (key.startsWith('inst:')) return cancelPartialInst(key, payId);
+  if (key.startsWith('flat:')) return cancelPartialFlat(key, payId);
 }
 // Devir: ödenen tutar kadarı bu taksite alınır (ödendi), kalan sonraki ödenmemiş taksite eklenir
 function carryOverInst(key, amount) {
@@ -4413,6 +4904,10 @@ function applyDebtCategory(cat, resetPlan) {
   document.getElementById('dPlanField').style.display = isCard ? 'none' : '';
   document.getElementById('dCardFields').style.display = isCard ? '' : 'none';
   document.getElementById('dStartField').style.display = isCard ? 'none' : '';
+  document.getElementById('dTitleRow').style.display = isCard ? 'none' : '';
+  document.getElementById('dCardPickRow').style.display = isCard ? '' : 'none';
+  document.getElementById('dMethodField').style.display = isCard ? 'none' : '';
+  document.getElementById('dBankField').style.display = isCard ? 'none' : (getMethod('d').method === 'banka' ? '' : 'none');
   document.getElementById('dDueLabel').textContent = isCard ? 'Son ödeme tarihi' : 'Vade tarihi (ops.)';
   if (isCard) {
     dPlan = 'flat';
@@ -4420,6 +4915,7 @@ function applyDebtCategory(cat, resetPlan) {
     document.getElementById('dFlatFields').style.display = 'none';
     document.getElementById('dFirstDateField').style.display = 'none';
     document.getElementById('dDueField').style.display = '';
+    rebuildCardPicker(document.getElementById('dCardPick').value);
     updateDebtHint();
   } else {
     if (resetPlan) setDebtPlan(cat === 'personal' ? 'flat' : 'installment');
@@ -4433,14 +4929,15 @@ function updateDebtHint() {
   const body = document.getElementById('dHintBody');
   if (document.getElementById('dCategory').value === 'card') {
     const total = parseFloat(document.getElementById('dCardDebt').value);
-    const limit = parseFloat(document.getElementById('dCardLimit').value);
+    const cardId = document.getElementById('dCardPick').value;
+    const card = cardId && cardId !== '__new__' ? (store.cards || []).find(c => c.id === cardId) : null;
     const due = document.getElementById('dDueDate').value;
     if (!total || total <= 0) { box.style.display = 'none'; return; }
     box.style.display = '';
     body.className = 'hint-grid';
     body.innerHTML = `
       <div class="hint-cell"><div class="sym">BORÇ</div><div class="val">${fmtTL(total)}</div></div>
-      <div class="hint-cell"><div class="sym">LİMİT</div><div class="val">${!isNaN(limit) ? fmtTL(limit) : '—'}</div></div>
+      <div class="hint-cell"><div class="sym">LİMİT</div><div class="val">${card && card.limit ? fmtTL(card.limit) : '—'}</div></div>
       <div class="hint-cell"><div class="sym">SON ÖDEME</div><div class="val" style="font-size:12px;">${due ? fmtDateShort(due) : '—'}</div></div>`;
     return;
   }
@@ -4484,7 +4981,8 @@ function openDebtForm(id) {
   document.getElementById('dNote').value = d && d.note ? d.note : '';
   const isCardD = d && d.category === 'card';
   document.getElementById('dCardDebt').value = isCardD && d.total != null ? d.total : '';
-  document.getElementById('dCardLimit').value = d && d.limit != null ? d.limit : '';
+  // Kart picker doldur
+  rebuildCardPicker(isCardD ? d.cardId : '');
   dCurF.set(d && !isCardD ? d.cur : 'TRY', d && !isCardD && d.total != null ? d.total : '', d && !isCardD ? d.totalTry : null);
   setMethod('d', d ? d.method : 'nakit', d ? d.bank : '');
   document.getElementById('dLoanBank').innerHTML = buildBankOptions(d && (d.category === 'loan' || d.category === 'card') ? (d.bank || '') : '');
@@ -4504,10 +5002,18 @@ document.getElementById('dCategory').addEventListener('change', function() {
 document.getElementById('dLoanBank').addEventListener('change', function() {
   if (this.value === '__manage__') openBanks();
 });
+document.getElementById('dCardPick').addEventListener('change', function() {
+  if (this.value === '__new__') {
+    this.value = '';
+    openCardForm(null);
+  } else {
+    updateDebtHint();
+  }
+});
 document.querySelectorAll('#dPlanSeg .seg-btn').forEach(b => {
   b.addEventListener('click', () => setDebtPlan(b.dataset.plan));
 });
-['dAmount', 'dCount', 'dFirstDate', 'dTotal', 'dDueDate', 'dCardDebt', 'dCardLimit'].forEach(idv => {
+['dAmount', 'dCount', 'dFirstDate', 'dTotal', 'dDueDate', 'dCardDebt'].forEach(idv => {
   const elx = document.getElementById(idv);
   elx.addEventListener('input', updateDebtHint);
   elx.addEventListener('change', updateDebtHint);
@@ -4518,20 +5024,32 @@ scrimDebtForm.addEventListener('click', e => { if (e.target === scrimDebtForm) c
 
 document.getElementById('debtFormSave').addEventListener('click', async () => {
   const category = document.getElementById('dCategory').value;
-  const title = document.getElementById('dTitle').value.trim();
-  const startDate = document.getElementById('dStartDate').value;
+  let title = document.getElementById('dTitle').value.trim();
+  let startDate = document.getElementById('dStartDate').value;
   const note = document.getElementById('dNote').value.trim();
 
-  if (!title) { toast('Ad gerekli', 'error'); return; }
-  if (!startDate) { toast('Borç tarihi gerekli', 'error'); return; }
+  if (category === 'card') {
+    // Kart kategorisi: başlık ve startDate kart üzerinden alınır
+    const cardIdNow = document.getElementById('dCardPick').value;
+    const cardNow = (store.cards || []).find(c => c.id === cardIdNow);
+    if (cardNow) title = cardNow.name || cardNow.bank || 'Kredi Kartı';
+    if (!startDate) startDate = todayISO();
+  } else {
+    if (!title) { toast('Ad gerekli', 'error'); return; }
+    if (!startDate) { toast('Borç tarihi gerekli', 'error'); return; }
+  }
 
   let fields;
+  let cardIdSel = '';
   if (category === 'card') {
     const total = parseFloat(document.getElementById('dCardDebt').value);
-    const limit = parseFloat(document.getElementById('dCardLimit').value);
     const dueDate = document.getElementById('dDueDate').value;
+    cardIdSel = document.getElementById('dCardPick').value;
     if (!total || total <= 0) { toast('Borç tutarı girin', 'error'); return; }
-    fields = { plan: 'flat', total, dueDate, cur: 'TRY', totalTry: total, limit: isNaN(limit) ? undefined : limit };
+    if (!cardIdSel || cardIdSel === '__new__') { toast('Önce bir kart seç', 'error'); return; }
+    const card = (store.cards || []).find(c => c.id === cardIdSel);
+    if (!card) { toast('Kart bulunamadı', 'error'); return; }
+    fields = { plan: 'flat', total, dueDate, cur: 'TRY', totalTry: total, cardId: cardIdSel };
   } else if (dPlan === 'flat') {
     const cf = dCurF.get();
     const total = cf.amount;
@@ -4554,7 +5072,10 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
   try { snapshot = await getHistoricalRates(startDate); } catch(e) {}
 
   let m;
-  if (category === 'loan' || category === 'card') {
+  if (category === 'card') {
+    const card = (store.cards || []).find(c => c.id === cardIdSel);
+    m = { method: 'banka', bank: card ? (card.bank || '') : '' };
+  } else if (category === 'loan') {
     const lb = document.getElementById('dLoanBank').value;
     m = { method: 'banka', bank: (lb && lb !== '__manage__') ? lb : '' };
   } else {
@@ -4574,7 +5095,8 @@ document.getElementById('debtFormSave').addEventListener('click', async () => {
     } else {
       d.plan = 'flat'; d.total = fields.total; d.dueDate = fields.dueDate;
       d.cur = fields.cur; d.totalTry = fields.totalTry;
-      if (fields.limit != null) d.limit = fields.limit; else delete d.limit;
+      if (fields.cardId) d.cardId = fields.cardId; else delete d.cardId;
+      delete d.limit;
       if (planChanged || !d.payments) d.payments = [];
       delete d.amount; delete d.count; delete d.firstDate; delete d.paidIdx;
     }
@@ -4629,8 +5151,11 @@ function renderDebtDetail(d) {
   if (t.paid > 0) breakBits.push(`<span class="dn">−${fmtTL(t.paid)} ödendi</span>`);
   const od = debtOverdueAmount(d);
   if (od > 0) breakBits.push(`<span class="up">${fmtTL(od)} gecikmiş</span>`);
-  if (d.category === 'card' && d.limit != null) {
-    breakBits.push(`<span>limit ${fmtTL(d.limit)} · uygun ${fmtTL(Math.max(0, d.limit - t.remaining))}</span>`);
+  if (d.category === 'card' && d.cardId) {
+    const card = (store.cards || []).find(c => c.id === d.cardId);
+    if (card && card.limit) {
+      breakBits.push(`<span>limit ${fmtTL(card.limit)} · uygun ${fmtTL(cardAvailable(card))}</span>`);
+    }
   }
   document.getElementById('dDetailBreak').innerHTML = breakBits.join('<br>');
 
@@ -5058,6 +5583,7 @@ scrimFaiz.addEventListener('click', e => { if (e.target === scrimFaiz) closeFaiz
 const scrimPartial = document.getElementById('scrimPartial');
 let ppCtx = null; // { key, cur, partial, mode, name, date }
 function ppHasNextUnpaid(key) {
+  if (!key.startsWith('inst:')) return false;
   const [, did, idxStr] = key.split(':');
   const d = store.debts.find(x => x.id === did);
   if (!d) return false;
@@ -5093,13 +5619,17 @@ function ppApplyMode() {
   }
 }
 function openPartialDialog(key, cur, partial, name, date) {
-  ppCtx = { key, cur: Number(cur) || 0, partial: Number(partial) || 0, mode: 'partial', name: name || '', date: date || '' };
+  const isFlat = key.startsWith('flat:');
+  ppCtx = { key, cur: Number(cur) || 0, partial: Number(partial) || 0, mode: 'partial', name: name || '', date: date || '', flat: isFlat };
   document.getElementById('ppTitle').textContent = (name ? name + ' · ' : '') + fmtTL(ppCtx.cur);
-  const sub = date ? fmtDateShort(date) + ' taksiti' : 'Taksit';
+  const sub = date ? fmtDateShort(date) + (isFlat ? ' borcu' : ' taksiti') : (isFlat ? 'Borç' : 'Taksit');
   document.getElementById('ppSub').textContent = sub;
-  // Devir, sonraki ödenmemiş taksit yoksa devre dışı
+  // Devir, sadece taksitli borçlar için anlamlı; ayrıca sonraki ödenmemiş taksit gerek
   const carryBtn = document.querySelector('.pp-mode[data-pp="carry"]');
-  if (carryBtn) carryBtn.disabled = !ppHasNextUnpaid(key);
+  if (carryBtn) {
+    if (isFlat) { carryBtn.disabled = true; carryBtn.style.display = 'none'; }
+    else { carryBtn.style.display = ''; carryBtn.disabled = !ppHasNextUnpaid(key); }
+  }
   if (carryBtn && carryBtn.disabled && ppCtx.mode === 'carry') ppCtx.mode = 'partial';
   ppApplyMode();
   scrimPartial.classList.add('open');
@@ -5129,7 +5659,7 @@ document.getElementById('ppSave').addEventListener('click', () => {
     const cap = ppCtx.cur - ppCtx.partial;
     if (v > cap + 0.001) { toast('Tutar kalan borçtan büyük olamaz', 'error'); return; }
     const dateVal = document.getElementById('ppDate').value || todayISO();
-    partialPayInst(ppCtx.key, v, dateVal);
+    addPartial(ppCtx.key, v, dateVal);
     toast('Kısmi ödeme eklendi', 'success');
   } else if (ppCtx.mode === 'carry') {
     if (v > ppCtx.cur + 0.001) { toast('Ödenen tutar taksitten büyük olamaz', 'error'); return; }
