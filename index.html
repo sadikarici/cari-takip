@@ -3199,7 +3199,8 @@ function initMethodField(prefix) {
   sel.addEventListener('change', () => {
     if (sel.value === '__new_account__') {
       sel.value = '';
-      openAccountForm(null, prefix);
+      sel.blur(); // iOS native picker'ın kapanmasını sağla, sonra formu aç
+      setTimeout(() => openAccountForm(null, prefix), 120);
     }
   });
 }
@@ -4409,7 +4410,7 @@ function openAccountForm(id, returnPrefix) {
   // Diğer formların üstünde görünmesi için inline z-index garanti et
   scrimAccountForm.style.zIndex = '500';
   scrimAccountForm.classList.add('open');
-  setTimeout(() => document.getElementById('aOwner').focus(), 250);
+  // iOS Safari'de auto-focus klavyeyi açıp sayfayı zıplatıyor — kullanıcı manuel doldursun
 }
 function closeAccountForm() { scrimAccountForm.classList.remove('open'); editingAccountId = null; accountFormReturnPrefix = null; }
 document.getElementById('accountFormClose').addEventListener('click', closeAccountForm);
