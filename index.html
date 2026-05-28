@@ -1515,10 +1515,15 @@
   <div id="viewSettings" style="display:none;">
     <div class="set-section">
       <div class="set-section-head">
-        <div class="set-section-title">Kredi <em>kartlarım</em></div>
-        <button class="set-section-action" id="setAddCard">+ Kart ekle</button>
+        <div class="set-section-title">Cüzdan <em>& kartlar</em></div>
       </div>
-      <div id="cardList"></div>
+      <div class="set-row" id="setOpenCards">
+        <div class="set-row-l">
+          <div class="set-row-t">Kredi kartlarım</div>
+          <div class="set-row-s">kart ekle · limit · kullanılabilir</div>
+        </div>
+        <div class="set-row-r" id="setCardsCnt">0</div>
+      </div>
     </div>
     <div class="set-section">
       <div class="set-section-head">
@@ -2102,6 +2107,27 @@
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="ratesCancel">Vazgeç</button>
       <button class="btn btn-primary" id="ratesSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CARDS LIST SHEET ============ -->
+<div class="scrim" id="scrimCards">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Kredi <em>kartlarım</em></div>
+        <div class="sheet-sub">Banka · sahibi · limit · kullanılabilir</div>
+      </div>
+      <button class="sheet-close" id="cardsClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div id="cardList"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="cardsDone">Kapat</button>
+      <button class="btn btn-primary" id="cardsAdd">+ Kart ekle</button>
     </div>
   </div>
 </div>
@@ -3870,36 +3896,48 @@ function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); ren
 
 // ============ SETTINGS ============
 function renderSettings() {
+  document.getElementById('setCardsCnt').textContent = (store.cards || []).length;
+  document.getElementById('setBanksCnt').textContent = (banks || []).length;
+  document.getElementById('setSubCatsCnt').textContent = (typeof subcats !== 'undefined' ? subcats : []).length;
+  document.getElementById('setIncCatsCnt').textContent = (typeof inccats !== 'undefined' ? inccats : []).length;
+  // Kart listesi modal açıksa onu da yenile
+  if (scrimCards && scrimCards.classList.contains('open')) renderCardList();
+}
+// ============ CARDS LIST SHEET ============
+const scrimCards = document.getElementById('scrimCards');
+function renderCardList() {
   const list = document.getElementById('cardList');
   if (!list) return;
   const cards = (store.cards || []).slice().sort((a, b) => (a.bank + a.name).localeCompare(b.bank + b.name, 'tr'));
   if (cards.length === 0) {
-    list.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:8px 0;">Henüz kart yok. + Kart ekle düğmesinden başla.</div>`;
-  } else {
-    list.innerHTML = cards.map(c => {
-      const used = cardOpenDebt(c);
-      const avail = cardAvailable(c);
-      const limit = Number(c.limit) || 0;
-      return `<div class="card-item" data-cid="${c.id}">
-        <div class="card-tag">${cardTag(c)}</div>
-        <div class="card-main">
-          <div class="card-name">${escapeHtml(c.bank || '')}${c.bank && c.name ? ' · ' : ''}${escapeHtml(c.name || '')}</div>
-          <div class="card-sub">${escapeHtml(c.owner || '—')} · limit ${fmtTL(limit)}</div>
-        </div>
-        <div class="card-amt">
-          <div class="card-amt-t">${fmtTL(avail)}</div>
-          <div class="card-amt-s">kullanılabilir</div>
-        </div>
-      </div>`;
-    }).join('');
-    list.querySelectorAll('.card-item').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.cid)));
+    list.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:18px 0;text-align:center;">Henüz kart yok. Aşağıdaki + Kart ekle düğmesinden başla.</div>`;
+    return;
   }
-  // Bilgi sayaçları
-  document.getElementById('setBanksCnt').textContent = (banks || []).length;
-  document.getElementById('setSubCatsCnt').textContent = (typeof subcats !== 'undefined' ? subcats : []).length;
-  document.getElementById('setIncCatsCnt').textContent = (typeof inccats !== 'undefined' ? inccats : []).length;
+  list.innerHTML = cards.map(c => {
+    const avail = cardAvailable(c);
+    const limit = Number(c.limit) || 0;
+    return `<div class="card-item" data-cid="${c.id}">
+      <div class="card-tag">${cardTag(c)}</div>
+      <div class="card-main">
+        <div class="card-name">${escapeHtml(c.bank || '')}${c.bank && c.name ? ' · ' : ''}${escapeHtml(c.name || '')}</div>
+        <div class="card-sub">${escapeHtml(c.owner || '—')} · limit ${fmtTL(limit)}</div>
+      </div>
+      <div class="card-amt">
+        <div class="card-amt-t">${fmtTL(avail)}</div>
+        <div class="card-amt-s">kullanılabilir</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.card-item').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.cid)));
 }
-document.getElementById('setAddCard').addEventListener('click', () => openCardForm(null));
+function openCardsList() { renderCardList(); scrimCards.classList.add('open'); }
+function closeCardsList() { scrimCards.classList.remove('open'); }
+document.getElementById('cardsClose').addEventListener('click', closeCardsList);
+document.getElementById('cardsDone').addEventListener('click', closeCardsList);
+document.getElementById('cardsAdd').addEventListener('click', () => openCardForm(null));
+scrimCards.addEventListener('click', e => { if (e.target === scrimCards) closeCardsList(); });
+
+document.getElementById('setOpenCards').addEventListener('click', openCardsList);
 document.getElementById('setOpenBanks').addEventListener('click', () => openBanks());
 document.getElementById('setOpenFaiz').addEventListener('click', () => openRates());
 document.getElementById('setOpenSubCats').addEventListener('click', () => openCats('sub'));
