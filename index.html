@@ -1435,8 +1435,11 @@
   <!-- üst sekmelere artık alt navigasyon var; sayım göstergeleri gizli kalır -->
   <span id="mtRecv" hidden>0</span><span id="mtDebt" hidden>0</span><span id="mtSub" hidden>0</span>
 
+  <!-- VIEW: HOME (anasayfa) — market & net durum panelleri yukarıdaki bloklardan beslenir -->
+  <div id="viewHome"></div>
+
   <!-- VIEW: RECEIVABLES (alacaklar) -->
-  <div id="viewReceivables">
+  <div id="viewReceivables" style="display:none;">
     <div class="atabs">
       <button class="atab active" data-atab="accounts">Cari hesaplar<span class="cnt" id="atCntAcc">0</span></button>
       <button class="atab" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntInc">0</span></button>
@@ -1557,7 +1560,11 @@
 <!-- BOTTOM NAV -->
 <nav class="bnav">
   <div class="bnav-shell">
-    <button class="bnav-btn active" data-mode="receivables">
+    <button class="bnav-btn active" data-mode="home">
+      <span class="bnav-ic"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></span>
+      <span>Anasayfa</span>
+    </button>
+    <button class="bnav-btn" data-mode="receivables">
       <span class="bnav-ic"><svg viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M5 20h14"/></svg></span>
       <span>Alacaklarım</span>
     </button>
@@ -2527,7 +2534,7 @@ const RATES_TTL = 15 * 60 * 1000;
 
 let store = { contacts: [], debts: [] };
 let filter = 'active';
-let mode = 'receivables'; // 'receivables' | 'debts' | 'subs'
+let mode = 'home'; // 'home' | 'receivables' | 'debts' | 'subs' | 'settings'
 let acctSubtab = 'accounts'; // 'accounts' | 'incomes'
 let mpSel = ''; // aylık plan detayında seçili ay anahtarı
 let debtFilter = 'active';
@@ -3826,18 +3833,22 @@ function fabLabelFor() {
   if (mode === 'debts') return 'Yeni borç';
   if (mode === 'subs') return 'Yeni abonelik';
   if (mode === 'settings') return 'Yeni kart';
+  if (mode === 'home') return '';
   return acctSubtab === 'incomes' ? 'Yeni gelir' : 'Yeni cari hesap';
 }
 function setMode(m) {
   mode = m;
+  document.getElementById('viewHome').style.display = m === 'home' ? '' : 'none';
   document.getElementById('viewReceivables').style.display = m === 'receivables' ? '' : 'none';
   document.getElementById('viewDebts').style.display = m === 'debts' ? '' : 'none';
   document.getElementById('viewSubs').style.display = m === 'subs' ? '' : 'none';
   document.getElementById('viewSettings').style.display = m === 'settings' ? '' : 'none';
-  // Ayarlarda kurlar ve net durum gizlensin
-  const hideTop = m === 'settings';
-  document.getElementById('marketPanel').style.display = hideTop ? 'none' : '';
-  document.getElementById('summaryPanel').style.display = hideTop ? 'none' : '';
+  // Kurlar ve NET DURUM sadece Anasayfa'da gözüksün
+  const showTop = m === 'home';
+  document.getElementById('marketPanel').style.display = showTop ? '' : 'none';
+  document.getElementById('summaryPanel').style.display = showTop ? '' : 'none';
+  // Anasayfada FAB'a gerek yok
+  document.querySelector('.fab-wrap').style.display = m === 'home' ? 'none' : '';
   document.querySelectorAll('.bnav-btn').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
   document.getElementById('fabLabel').textContent = fabLabelFor();
   if (m === 'settings') renderSettings();
@@ -5777,7 +5788,7 @@ txCurF = curField('txCur', 'txAmount', 'txDate', 'txTry', 'txTryField', 'txAmoun
 dpCurF = curField('dpCur', 'dpAmount', 'dpDate', 'dpTry', 'dpTryField', 'dpAmountLabel');
 dCurF = curField('dCur', 'dTotal', 'dStartDate', 'dTotalTry', 'dTryField', 'dTotalLabel');
 refresh();
-setMode('receivables');
+setMode('home');
 
 (async () => {
   try {
