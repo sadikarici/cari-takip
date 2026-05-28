@@ -1163,6 +1163,51 @@
   .arc-stat .val { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .arc-stat-sec-title { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid var(--hair); }
 
+  /* ============ CUSTOM CONFIRM ============ */
+  #scrimConfirm { align-items: center !important; z-index: 600 !important; }
+  .confirm-card {
+    background: var(--paper);
+    border-radius: 14px;
+    padding: 22px 22px 16px;
+    max-width: 360px;
+    width: calc(100% - 40px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.08);
+    animation: confirmIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes confirmIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .confirm-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--red-bg);
+    color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .confirm-icon.warn { background: var(--ochre-bg); color: var(--ochre); }
+  .confirm-icon.info { background: var(--forest-bg); color: var(--forest); }
+  .confirm-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .confirm-message {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .confirm-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .confirm-actions .btn { padding: 10px 18px; }
+
   /* Toast */
   .toast {
     position: fixed;
@@ -2388,6 +2433,19 @@
       <button class="btn btn-danger" id="adArcDelete">Sil</button>
       <button class="btn btn-ghost" id="archiveDetailDone">Kapat</button>
       <button class="btn btn-primary" id="adArcPrint">PDF olarak indir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOM CONFIRM DIALOG ============ -->
+<div class="scrim" id="scrimConfirm">
+  <div class="confirm-card">
+    <div class="confirm-icon" id="confirmIcon">!</div>
+    <div class="confirm-title" id="confirmTitle">Emin misin?</div>
+    <div class="confirm-message" id="confirmMessage">—</div>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" id="confirmCancel">Vazgeç</button>
+      <button class="btn btn-danger" id="confirmOk">Tamam</button>
     </div>
   </div>
 </div>
@@ -4694,6 +4752,34 @@ document.getElementById('adEdit').addEventListener('click', () => {
   openAccountForm(id);
 });
 
+// ============ CUSTOM CONFIRM ============
+const scrimConfirm = document.getElementById('scrimConfirm');
+let confirmResolver = null;
+function customConfirm(opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = opts.title || 'Emin misin?';
+    document.getElementById('confirmMessage').textContent = opts.message || '';
+    const okBtn = document.getElementById('confirmOk');
+    const cancelBtn = document.getElementById('confirmCancel');
+    okBtn.textContent = opts.confirmText || 'Tamam';
+    cancelBtn.textContent = opts.cancelText || 'Vazgeç';
+    okBtn.className = 'btn ' + (opts.danger === false ? 'btn-primary' : 'btn-danger');
+    const icon = document.getElementById('confirmIcon');
+    icon.className = 'confirm-icon ' + (opts.danger === false ? 'info' : (opts.warn ? 'warn' : ''));
+    icon.textContent = opts.icon || (opts.danger === false ? '?' : '!');
+    scrimConfirm.classList.add('open');
+  });
+}
+function closeConfirm(result) {
+  scrimConfirm.classList.remove('open');
+  if (confirmResolver) { const r = confirmResolver; confirmResolver = null; r(result); }
+}
+document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
+document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
+scrimConfirm.addEventListener('click', e => { if (e.target === scrimConfirm) closeConfirm(false); });
+
 // ============ YEARLY ARCHIVES ============
 const scrimArchives = document.getElementById('scrimArchives');
 const scrimArchiveDetail = document.getElementById('scrimArchiveDetail');
@@ -4984,12 +5070,18 @@ function renderArchiveList() {
     if (e.target.closest('.arc-del')) return;
     openArchiveDetail(el.dataset.aid);
   }));
-  list.querySelectorAll('.arc-del').forEach(btn => btn.addEventListener('click', e => {
+  list.querySelectorAll('.arc-del').forEach(btn => btn.addEventListener('click', async e => {
     e.stopPropagation();
     const id = btn.dataset.delAid;
     const a = (store.archives || []).find(x => x.id === id);
     if (!a) return;
-    if (!confirm(`"${a.label || a.year + ' arşivi'}" silinsin mi?`)) return;
+    const ok = await customConfirm({
+      title: 'Arşivi sil',
+      message: `"${a.label || a.year + ' arşivi'}" silinecek. Bu işlem geri alınamaz.`,
+      confirmText: 'Sil',
+      danger: true
+    });
+    if (!ok) return;
     store.archives = (store.archives || []).filter(x => x.id !== id);
     persist();
     renderArchiveList();
@@ -5036,9 +5128,16 @@ function closeArchiveDetail() { scrimArchiveDetail.classList.remove('open'); cur
 document.getElementById('archiveDetailClose').addEventListener('click', closeArchiveDetail);
 document.getElementById('archiveDetailDone').addEventListener('click', closeArchiveDetail);
 scrimArchiveDetail.addEventListener('click', e => { if (e.target === scrimArchiveDetail) closeArchiveDetail(); });
-document.getElementById('adArcDelete').addEventListener('click', () => {
+document.getElementById('adArcDelete').addEventListener('click', async () => {
   if (!currentArchiveId) return;
-  if (!confirm('Bu arşiv silinsin mi?')) return;
+  const a = (store.archives || []).find(x => x.id === currentArchiveId);
+  const ok = await customConfirm({
+    title: 'Arşivi sil',
+    message: `"${a ? (a.label || a.year + ' arşivi') : 'Arşiv'}" silinecek. Bu işlem geri alınamaz.`,
+    confirmText: 'Sil',
+    danger: true
+  });
+  if (!ok) return;
   store.archives = (store.archives || []).filter(x => x.id !== currentArchiveId);
   persist();
   closeArchiveDetail();
