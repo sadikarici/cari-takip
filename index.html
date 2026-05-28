@@ -1155,7 +1155,14 @@
   .arc-main { flex: 1; min-width: 0; }
   .arc-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 500; color: var(--ink); }
   .arc-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted); margin-top: 2px; letter-spacing: 0.02em; }
-  .arc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .arc-hero { background: var(--ink); color: var(--paper); border-radius: var(--r-lg); padding: 18px 20px; margin-bottom: 12px; }
+  .arc-hero-lbl { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+  .arc-hero-val { font-family: 'IBM Plex Serif', serif; font-size: 30px; font-weight: 500; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; }
+  .arc-hero-val.pos { color: #b8e0bc; }
+  .arc-hero-val.neg { color: #ffa899; }
+  .arc-hero-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; opacity: 0.65; margin-top: 6px; letter-spacing: 0.04em; }
+  .arc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .arc-stats.two { grid-template-columns: 1fr 1fr; }
   .arc-del { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--hair-2); background: var(--paper); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; cursor: pointer; padding: 0; flex-shrink: 0; }
   .arc-del:active { background: var(--red-bg); color: var(--red); border-color: var(--red); }
   .arc-stat { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 11px 10px; }
@@ -2407,20 +2414,24 @@
       <button class="sheet-close" id="archiveDetailClose" aria-label="Kapat"></button>
     </div>
     <div class="sheet-body">
-      <div class="arc-stats">
-        <div class="arc-stat"><div class="lbl">Alacak</div><div class="val" id="adArcRecv">—</div></div>
-        <div class="arc-stat"><div class="lbl">Borç</div><div class="val" id="adArcDebt">—</div></div>
-        <div class="arc-stat"><div class="lbl">Net</div><div class="val" id="adArcNet">—</div></div>
+      <div class="arc-hero">
+        <div class="arc-hero-lbl">Net Durum</div>
+        <div class="arc-hero-val" id="adArcNet">—</div>
+        <div class="arc-hero-sub">alacak − borç</div>
       </div>
-      <div class="arc-stats">
+      <div class="arc-stats two">
+        <div class="arc-stat"><div class="lbl">Açık alacak</div><div class="val" id="adArcRecv">—</div></div>
+        <div class="arc-stat"><div class="lbl">Açık borç</div><div class="val" id="adArcDebt">—</div></div>
+      </div>
+      <div class="arc-stats two">
         <div class="arc-stat"><div class="lbl">Aylık gelir</div><div class="val" id="adArcInc">—</div></div>
         <div class="arc-stat"><div class="lbl">Aylık abonelik</div><div class="val" id="adArcSub2">—</div></div>
-        <div class="arc-stat"><div class="lbl">Kart sayısı</div><div class="val" id="adArcCards">—</div></div>
       </div>
       <div class="arc-stat-sec-title">Yıl içi hareketler</div>
       <div class="arc-stats">
         <div class="arc-stat"><div class="lbl">Yapılan ödemeler</div><div class="val" id="adArcYearPay">—</div></div>
         <div class="arc-stat"><div class="lbl">Alınan gelirler</div><div class="val" id="adArcYearInc">—</div></div>
+        <div class="arc-stat"><div class="lbl">Abonelik gideri</div><div class="val" id="adArcYearSubs">—</div></div>
       </div>
       <div class="arc-stat-sec-title">Borç hareketleri</div>
       <div class="arc-stats">
@@ -4974,12 +4985,29 @@ function computeYearStats(snap, year) {
     if (remaining > 0.01) carriedOut.push({ d, remaining });
   });
 
+  // YILLIK ABONELİK GİDERİ: o yıl içinde her aktif aboneliğin toplamı
+  // (startDate ve term sonu dikkate alınır)
+  let yearSubs = 0;
+  (snap.subs || []).forEach(s => {
+    if (s.active === false) return;
+    const startM = (s.startDate || '').slice(0, 7);
+    let endM = null;
+    if (s.term > 0 && startM) endM = monthKeyAdd(startM, s.term - 1);
+    for (let mo = 1; mo <= 12; mo++) {
+      const m = `${year}-${String(mo).padStart(2, '0')}`;
+      if (startM && m < startM) continue;
+      if (endM && m > endM) continue;
+      yearSubs += subAmountForMonthOrFallback(s, m);
+    }
+  });
+
   paymentEntries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   incomeEntries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   return {
     yearPayments: payments,
     yearIncome: income,
+    yearSubs,
     paymentEntries, incomeEntries,
     newDebts, newDebtsCount: newDebts.length, newDebtsTotal: newDebts.reduce((s, x) => s + x.total, 0),
     carriedIn, carriedInCount: carriedIn.length, carriedInTotal: carriedIn.reduce((s, x) => s + x.total, 0),
@@ -5111,14 +5139,19 @@ function openArchiveDetail(id) {
   const ys = computeYearStats(a.snapshot || {}, a.year);
   document.getElementById('adArcYear').textContent = `${a.year} arşivi`;
   document.getElementById('adArcSub').textContent = new Date(a.createdAt).toLocaleString('tr-TR');
+  // Net Durum hero — pozitif/negatif renklendir
+  const netEl = document.getElementById('adArcNet');
+  const net = Number(s.net) || 0;
+  const netSign = net > 0 ? '+' : (net < 0 ? '−' : '');
+  netEl.textContent = netSign + fmtTL(Math.abs(net));
+  netEl.className = 'arc-hero-val ' + (net > 0 ? 'pos' : (net < 0 ? 'neg' : ''));
   document.getElementById('adArcRecv').textContent = fmtTL(s.recvOpen || 0);
   document.getElementById('adArcDebt').textContent = fmtTL(s.debtRemaining || 0);
-  document.getElementById('adArcNet').textContent = fmtTL(s.net || 0);
   document.getElementById('adArcInc').textContent = fmtTL(s.monthlyIncome || 0);
   document.getElementById('adArcSub2').textContent = fmtTL(s.monthlySubscription || 0);
-  document.getElementById('adArcCards').textContent = (s.cardsCount || 0) + ' kart';
   document.getElementById('adArcYearPay').textContent = fmtTL(ys.yearPayments);
   document.getElementById('adArcYearInc').textContent = fmtTL(ys.yearIncome);
+  document.getElementById('adArcYearSubs').textContent = fmtTL(ys.yearSubs || 0);
   document.getElementById('adArcNewDebt').textContent = fmtTL(ys.newDebtsTotal) + (ys.newDebtsCount ? ` · ${ys.newDebtsCount} kayıt` : '');
   document.getElementById('adArcCarriedIn').textContent = fmtTL(ys.carriedInTotal) + (ys.carriedInCount ? ` · ${ys.carriedInCount} kayıt` : '');
   document.getElementById('adArcCarriedOut').textContent = fmtTL(ys.carriedOutTotal) + (ys.carriedOutCount ? ` · ${ys.carriedOutCount} kayıt` : '');
@@ -5222,6 +5255,11 @@ function buildArchivePrintHtml(a) {
           <div class="lbl">Aylık Abonelik</div>
           <div class="val">${tlFmt(s.monthlySubscription)}</div>
           <div class="sub">${s.subsCount || 0} abonelik</div>
+        </div>
+        <div class="ar-summary-cell">
+          <div class="lbl">Yıllık Abonelik Gideri</div>
+          <div class="val">${tlFmt(ys.yearSubs)}</div>
+          <div class="sub">${a.year} yıl içi</div>
         </div>
       </div>
       <div class="ar-page-head" style="margin-top:18px;">
