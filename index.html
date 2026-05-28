@@ -394,6 +394,117 @@
     margin-top: 1px;
   }
 
+  /* ============ DEBT SUMMARY + CARDS ============ */
+  .debt-summary {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--r-lg);
+    padding: 18px 22px;
+    margin: 0 20px 18px;
+  }
+  .debt-sum-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .debt-sum-amount {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin: 5px 0 12px;
+  }
+  .debt-sum-amount .sym { font-size: 16px; opacity: 0.7; margin-right: 4px; vertical-align: 2px; }
+  .debt-sum-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ds-chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 5px 10px;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.10);
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .ds-chip .ds-amt { font-family: 'IBM Plex Serif', serif; font-size: 11.5px; font-weight: 600; }
+  .ds-chip .ds-lbl { opacity: 0.7; }
+
+  .debt-list { padding: 0 20px; }
+  .debt-card {
+    background: var(--paper-2);
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+    padding: 13px 14px;
+    margin-bottom: 9px;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    column-gap: 12px;
+    row-gap: 10px;
+    align-items: center;
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+  .debt-card:active { background: var(--paper); }
+  .debt-card.settled { opacity: 0.55; }
+  .debt-card.overdue { border-color: #e0b4ad; background: #fbf4f1; }
+  .debt-card-main { min-width: 0; }
+  .debt-card-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .debt-card-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .debt-card-meta .dot { color: var(--faint); margin: 0 5px; }
+  .debt-card-meta .warn { color: var(--red); font-weight: 600; }
+  .debt-card-amt { text-align: right; }
+  .debt-card-amt-main {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .debt-card-amt-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  .debt-card.settled .debt-card-amt-main { text-decoration: line-through; color: var(--muted); }
+  .debt-card.overdue .debt-card-amt-main { color: var(--red); }
+  .debt-progress {
+    grid-column: 1 / -1;
+    height: 5px;
+    background: var(--paper);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .debt-progress-fill {
+    height: 100%;
+    background: var(--forest);
+    transition: width 0.35s;
+  }
+  .debt-card.overdue .debt-progress-fill { background: var(--red); }
+  .debt-card.settled .debt-progress-fill { background: var(--muted); }
+
   /* ============ EMPTY STATE ============ */
   .empty {
     padding: 60px 20px;
@@ -1479,6 +1590,16 @@
   <!-- VIEW: DEBTS (borçlar) -->
   <div id="viewDebts" style="display:none;">
     <div id="monthPlan"></div>
+    <!-- Toplam borç özet kartı -->
+    <div class="debt-summary" id="debtSummary">
+      <div class="debt-sum-label">Toplam açık borç</div>
+      <div class="debt-sum-amount"><span class="sym">₺</span><span id="debtTotalAmt">0</span></div>
+      <div class="debt-sum-meta">
+        <span class="ds-chip"><span class="ds-amt" id="dsLoanAmt">₺0</span><span class="ds-lbl">kredi</span></span>
+        <span class="ds-chip"><span class="ds-amt" id="dsCardAmt">₺0</span><span class="ds-lbl">kart</span></span>
+        <span class="ds-chip"><span class="ds-amt" id="dsPersonalAmt">₺0</span><span class="ds-lbl">kişisel</span></span>
+      </div>
+    </div>
     <div class="section-head">
       <div class="section-title">Borç <em>kayıtları</em></div>
       <div class="section-count" id="debtSectionCount">0 kayıt</div>
@@ -1489,7 +1610,7 @@
       <button class="filter" data-dfilter="settled">Kapalı<span id="dCntSettled">0</span></button>
       <button class="filter" data-dfilter="all">Hepsi<span id="dCntAll">0</span></button>
     </div>
-    <div class="contact-list" id="debtList"></div>
+    <div class="debt-list" id="debtList"></div>
   </div>
 
   <!-- VIEW: SUBSCRIPTIONS (abonelikler) -->
@@ -4837,6 +4958,21 @@ function renderDebts() {
   document.getElementById('dCntSettled').textContent = debts.filter(debtIsSettled).length;
   document.getElementById('dCntAll').textContent = debts.length;
 
+  // Toplam açık borç (kategoriye göre)
+  let sumLoan = 0, sumCard = 0, sumPersonal = 0;
+  debts.forEach(d => {
+    const rem = debtTotals(d).remaining;
+    if (rem < 0.01) return;
+    if (d.category === 'loan') sumLoan += rem;
+    else if (d.category === 'card') sumCard += rem;
+    else if (d.category === 'personal') sumPersonal += rem;
+  });
+  const sumAll = sumLoan + sumCard + sumPersonal;
+  document.getElementById('debtTotalAmt').textContent = Number(sumAll).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('dsLoanAmt').textContent = fmtTL(sumLoan);
+  document.getElementById('dsCardAmt').textContent = fmtTL(sumCard);
+  document.getElementById('dsPersonalAmt').textContent = fmtTL(sumPersonal);
+
   let shown = [];
   if (debtFilter === 'active') shown = debts.filter(debtIsActive);
   else if (debtFilter === 'overdue') shown = debts.filter(debtHasOverdue);
@@ -4873,30 +5009,35 @@ function renderDebts() {
     const cat = DEBT_CATS[d.category] || DEBT_CATS.loan;
     const chip = d.category === 'personal' ? initials(d.title) : cat.short;
     const next = debtNextDue(d);
-    const metaMid = d.plan === 'flat'
-      ? (d.category === 'card'
-          ? (d.dueDate ? `son ödeme ${fmtDateShort(d.dueDate)}` : '—')
-          : (d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz'))
-      : `${t.paidCount}/${d.count} taksit`;
+    const overdueAmt = overdue ? debtOverdueAmount(d) : 0;
+    const metaParts = [cat.label];
+    if (d.plan === 'flat') {
+      if (d.category === 'card') metaParts.push(d.dueDate ? `son ödeme ${fmtDateShort(d.dueDate)}` : '—');
+      else metaParts.push(d.dueDate ? `vade ${fmtDateShort(d.dueDate)}` : 'vadesiz');
+    } else {
+      metaParts.push(`${t.paidCount}/${d.count} taksit`);
+      if (!settled && next) metaParts.push(`sonraki ${fmtDateShort(next)}`);
+    }
+    if (overdue && overdueAmt > 0.01) metaParts.push(`<span class="warn">gecikmiş ${fmtTL(overdueAmt)}</span>`);
+    const meta = metaParts.join('<span class="dot">·</span>');
     const displayName = debtName(d);
+    const pct = t.total > 0 ? Math.min(100, Math.round((t.paid / t.total) * 100)) : 0;
 
-    return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
+    return `<div class="debt-card ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-did="${d.id}">
       <div class="cat-chip ${d.category}">${chip}</div>
-      <div class="contact-main">
-        <div class="contact-name">${escapeHtml(displayName)}</div>
-        <div class="contact-meta">
-          ${cat.label}<span class="dot">·</span>${metaMid}
-          ${!settled && d.plan === 'installment' && next ? `<span class="dot">·</span>sonraki ${fmtDateShort(next)}` : ''}
-        </div>
+      <div class="debt-card-main">
+        <div class="debt-card-title">${escapeHtml(displayName)}</div>
+        <div class="debt-card-meta">${meta}</div>
       </div>
-      <div class="contact-amount">
-        <div class="main">${fmtTL(settled ? t.total : t.remaining)}</div>
-        ${settled ? '<div class="sub">kapandı</div>' : (t.paid > 0 ? `<div class="sub">${fmtTL(t.paid)} ödendi</div>` : `<div class="sub">${fmtTL(t.total)} toplam</div>`)}
+      <div class="debt-card-amt">
+        <div class="debt-card-amt-main">${fmtTL(settled ? t.total : t.remaining)}</div>
+        <div class="debt-card-amt-sub">${settled ? 'kapandı' : (t.paid > 0 ? `${fmtTL(t.paid)} / ${fmtTL(t.total)}` : `${fmtTL(t.total)} toplam`)}</div>
       </div>
+      <div class="debt-progress"><div class="debt-progress-fill" style="width:${pct}%;"></div></div>
     </div>`;
   }).join('');
 
-  list.querySelectorAll('.contact').forEach(el => {
+  list.querySelectorAll('.debt-card').forEach(el => {
     el.addEventListener('click', () => openDebt(el.dataset.did));
   });
 }
