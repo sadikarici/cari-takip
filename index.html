@@ -589,8 +589,8 @@
     animation: fadeIn 0.2s;
   }
   .scrim.open { display: flex; }
-  /* Bir formdan üzerine açılabilen scrim'ler (hesap/kart formları) üstte kalsın */
-  #scrimAccountForm, #scrimAccountDetail, #scrimAccounts, #scrimCardForm { z-index: 60; }
+  /* Bir formdan üzerine açılabilen scrim'ler (hesap/kart formları) en üstte kalsın */
+  #scrimAccountForm, #scrimAccountDetail, #scrimAccounts, #scrimCardForm, #scrimCardDetail, #scrimPartial, #scrimFx, #scrimFaiz, #scrimBanks, #scrimCats, #scrimRates { z-index: 200 !important; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes slideUp {
     from { transform: translateY(100%); }
@@ -4406,6 +4406,8 @@ function openAccountForm(id, returnPrefix) {
   document.getElementById('aOwner').value = a ? (a.owner || '') : '';
   document.getElementById('aIban').value = a ? (a.iban || '') : '';
   document.getElementById('accountFormDelete').style.display = a ? '' : 'none';
+  // Diğer formların üstünde görünmesi için inline z-index garanti et
+  scrimAccountForm.style.zIndex = '500';
   scrimAccountForm.classList.add('open');
   setTimeout(() => document.getElementById('aOwner').focus(), 250);
 }
