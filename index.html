@@ -3954,7 +3954,7 @@ function renderMonthPlan() {
     activeSubs.forEach(s => { if (subChargesInMonth(s, m)) list.push({ date: billingDate(m, s.day || 1), amount: subAmountForMonth(s, m), name: s.name + (subAmountEstimated(s, m) ? ' (tahmini)' : ''), sub: true, chip: 'A', cls: 'sub', key: `sub:${s.id}:${m}`, paid: !!(store.paidLog && store.paidLog[`sub:${s.id}:${m}`]) }); });
     return list;
   };
-  const monthTotal = m => monthItems(m).reduce((sum, it) => sum + it.amount, 0);
+  const monthTotal = m => monthItems(m).reduce((sum, it) => sum + (it.paid ? 0 : it.amount), 0);
 
   // Gösterilecek aylar: yaklaşan 12 takvim ayı ∪ ileri tarihli borç ayları (yatay kaydırılır)
   const debtFuture = Object.keys(buckets).filter(m => m >= todayM);
@@ -3963,8 +3963,8 @@ function renderMonthPlan() {
 
   // Gecikmiş: yalnızca geçmiş borç ödemeleri (abonelikler hariç)
   const overdueMonths = Object.keys(buckets).filter(m => m < todayM);
-  const overdueTotal = overdueMonths.reduce((s, m) => s + buckets[m].total, 0);
   const overdueItems = overdueMonths.flatMap(m => buckets[m].items);
+  const overdueTotal = overdueItems.reduce((s, it) => s + (it.paid ? 0 : it.amount), 0);
 
   const monthLabel = m => {
     let s = new Date(m + '-01T00:00:00').toLocaleDateString('tr-TR', { month: 'long' });
