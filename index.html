@@ -1556,6 +1556,16 @@
       <button class="atab" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntInc">0</span></button>
     </div>
     <div id="aPanelAccounts">
+      <!-- Toplam alacak özet kartı -->
+      <div class="debt-summary">
+        <div class="debt-sum-label">Toplam açık alacak</div>
+        <div class="debt-sum-amount"><span class="sym">₺</span><span id="recvTotalAmt">0</span></div>
+        <div class="debt-sum-meta">
+          <span class="ds-chip"><span class="ds-amt" id="recvActiveAmt">₺0</span><span class="ds-lbl">aktif</span></span>
+          <span class="ds-chip"><span class="ds-amt" id="recvOverdueAmt">₺0</span><span class="ds-lbl">geciken</span></span>
+          <span class="ds-chip"><span class="ds-amt" id="recvSettledAmt">₺0</span><span class="ds-lbl">kapanan</span></span>
+        </div>
+      </div>
       <div class="section-head">
         <div class="section-title">Cari <em>hesaplar</em></div>
         <div class="section-count" id="sectionCount">0 kayıt</div>
@@ -1566,24 +1576,23 @@
         <button class="filter" data-filter="settled">Kapalı<span id="cntSettled">0</span></button>
         <button class="filter" data-filter="all">Hepsi<span id="cntAll">0</span></button>
       </div>
-      <div class="contact-list" id="contactList"></div>
+      <div class="debt-list" id="contactList"></div>
     </div>
     <div id="aPanelIncomes" style="display:none;">
-      <div class="sub-summary">
-        <div class="sub-sum-card">
-          <div class="sub-sum-label">Aylık gelir</div>
-          <div class="sub-sum-val" id="incMonthly">₺0</div>
-        </div>
-        <div class="sub-sum-card">
-          <div class="sub-sum-label">Yıllık</div>
-          <div class="sub-sum-val" id="incYearly">₺0</div>
+      <!-- Toplam gelir özet kartı -->
+      <div class="debt-summary">
+        <div class="debt-sum-label">Toplam aylık gelir</div>
+        <div class="debt-sum-amount"><span class="sym">₺</span><span id="incMonthlyAmt">0</span></div>
+        <div class="debt-sum-meta">
+          <span class="ds-chip"><span class="ds-amt" id="incYearlyAmt">₺0</span><span class="ds-lbl">yıllık</span></span>
+          <span class="ds-chip"><span class="ds-amt" id="incActiveCnt">0</span><span class="ds-lbl">aktif</span></span>
         </div>
       </div>
       <div class="section-head">
         <div class="section-title">Gelir <em>kayıtları</em></div>
         <div class="section-count" id="incSectionCount">0 kayıt</div>
       </div>
-      <div class="contact-list" id="incomeList"></div>
+      <div class="debt-list" id="incomeList"></div>
     </div>
   </div>
 
@@ -1615,21 +1624,20 @@
 
   <!-- VIEW: SUBSCRIPTIONS (abonelikler) -->
   <div id="viewSubs" style="display:none;">
-    <div class="sub-summary">
-      <div class="sub-sum-card">
-        <div class="sub-sum-label">Aylık toplam</div>
-        <div class="sub-sum-val" id="subMonthly">₺0</div>
-      </div>
-      <div class="sub-sum-card">
-        <div class="sub-sum-label">Yıllık</div>
-        <div class="sub-sum-val" id="subYearly">₺0</div>
+    <!-- Toplam abonelik özet kartı -->
+    <div class="debt-summary">
+      <div class="debt-sum-label">Toplam aylık abonelik</div>
+      <div class="debt-sum-amount"><span class="sym">₺</span><span id="subMonthlyAmt">0</span></div>
+      <div class="debt-sum-meta">
+        <span class="ds-chip"><span class="ds-amt" id="subYearlyAmt">₺0</span><span class="ds-lbl">yıllık</span></span>
+        <span class="ds-chip"><span class="ds-amt" id="subActiveCnt">0</span><span class="ds-lbl">aktif</span></span>
       </div>
     </div>
     <div class="section-head">
       <div class="section-title">Abonelik <em>kayıtları</em></div>
       <div class="section-count" id="subSectionCount">0 kayıt</div>
     </div>
-    <div class="contact-list" id="subList"></div>
+    <div class="debt-list" id="subList"></div>
   </div>
 
   <!-- VIEW: SETTINGS (ayarlar) -->
@@ -3357,6 +3365,21 @@ function render() {
   document.getElementById('cntSettled').textContent = cSet;
   document.getElementById('cntAll').textContent = contacts.length;
 
+  // Toplam açık alacak özet
+  let sumActive = 0, sumOverdue = 0, sumSettled = 0;
+  contacts.forEach(c => {
+    const t = contactTotals(c);
+    if (contactIsSettled(c)) sumSettled += Number(t.debt) || 0;
+    else {
+      sumActive += Number(t.balance) || 0;
+      if (contactHasOverdue(c)) sumOverdue += Number(t.balance) || 0;
+    }
+  });
+  document.getElementById('recvTotalAmt').textContent = Number(sumActive).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('recvActiveAmt').textContent = fmtTL(sumActive);
+  document.getElementById('recvOverdueAmt').textContent = fmtTL(sumOverdue);
+  document.getElementById('recvSettledAmt').textContent = fmtTL(sumSettled);
+
   // Filter
   let shown = [];
   if (filter === 'active') shown = contacts.filter(contactIsActive);
@@ -3395,24 +3418,29 @@ function render() {
     const lastTxDate = (c.txs || []).length > 0
       ? [...c.txs].sort((a,b) => b.date.localeCompare(a.date))[0].date
       : null;
+    const metaParts = [`${txCount} hareket`];
+    if (lastTxDate) metaParts.push(`son ${fmtDateShort(lastTxDate)}`);
+    if (overdue) metaParts.push(`<span class="warn">geciken</span>`);
+    const meta = metaParts.join('<span class="dot">·</span>');
+    const total = Number(t.debt) || 0;
+    const paid = Number(t.paid) || 0;
+    const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
 
-    return `<div class="contact ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-id="${c.id}">
+    return `<div class="debt-card ${settled ? 'settled' : ''} ${overdue ? 'overdue' : ''}" data-id="${c.id}">
       <div class="contact-avatar">${initials(c.name)}</div>
-      <div class="contact-main">
-        <div class="contact-name">${escapeHtml(c.name)}</div>
-        <div class="contact-meta">
-          ${txCount} hareket
-          ${lastTxDate ? `<span class="dot">·</span>son ${fmtDateShort(lastTxDate)}` : ''}
-        </div>
+      <div class="debt-card-main">
+        <div class="debt-card-title">${escapeHtml(c.name)}</div>
+        <div class="debt-card-meta">${meta}</div>
       </div>
-      <div class="contact-amount">
-        <div class="main">${fmtTL(settled ? t.debt : t.balance)}</div>
-        ${t.paid > 0 && !settled ? `<div class="sub">${fmtTL(t.paid)} ödendi</div>` : (settled ? '<div class="sub">kapandı</div>' : '')}
+      <div class="debt-card-amt">
+        <div class="debt-card-amt-main">${fmtTL(settled ? t.debt : t.balance)}</div>
+        <div class="debt-card-amt-sub">${settled ? 'kapandı' : (paid > 0 ? `${fmtTL(paid)} / ${fmtTL(total)}` : `${fmtTL(total)} toplam`)}</div>
       </div>
+      ${total > 0 ? `<div class="debt-progress"><div class="debt-progress-fill" style="width:${pct}%;"></div></div>` : ''}
     </div>`;
   }).join('');
 
-  list.querySelectorAll('.contact').forEach(el => {
+  list.querySelectorAll('.debt-card').forEach(el => {
     el.addEventListener('click', () => openAccount(el.dataset.id));
   });
 }
@@ -4262,8 +4290,9 @@ function renderSubs() {
     const m = monthKeyAdd(todayM, i);
     subs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); });
   }
-  document.getElementById('subMonthly').textContent = fmtTL(monthly);
-  document.getElementById('subYearly').textContent = fmtTL(yearly);
+  document.getElementById('subMonthlyAmt').textContent = Number(monthly).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('subYearlyAmt').textContent = fmtTL(yearly);
+  document.getElementById('subActiveCnt').textContent = ongoing.length;
   document.getElementById('mtSub').textContent = ongoing.length;
   document.getElementById('subSectionCount').textContent = visible.length + ' kayıt';
   const list = document.getElementById('subList');
@@ -4281,31 +4310,47 @@ function renderSubs() {
     const done = subCompleted(s);
     const dim = cancelled || done;
     const cat = catLabel(s.category);
-    const firma = s.company ? `${escapeHtml(s.company)}<span class="dot">·</span>` : '';
-    const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
+    const metaParts = [];
+    if (s.company) metaParts.push(escapeHtml(s.company));
+    metaParts.push(cat);
     const nb = subNextDate(s);
-    let core;
-    if (cancelled) core = 'iptal';
+    if (cancelled) metaParts.push('iptal');
     else if (s.term > 0) {
       const range = `${s.term} ay taksit`;
-      core = done ? `${range}<span class="dot">·</span>tamamlandı` : `${range}<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+      metaParts.push(done ? `${range} · tamamlandı` : `${range} · sonraki ${fmtDateShort(nb)}`);
     } else {
-      core = `her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
+      metaParts.push(`her ayın ${s.day}'i · sonraki ${fmtDateShort(nb)}`);
     }
-    const meta = `${firma}${cat}<span class="dot">·</span>${core}${chan}`;
-    return `<div class="contact ${dim ? 'settled' : ''}" data-sid="${s.id}">
+    if (methodText(s)) metaParts.push(escapeHtml(methodText(s)));
+    const meta = metaParts.join('<span class="dot">·</span>');
+    // Süreli aboneliklerde ilerleme: geçen taksit / toplam taksit
+    let progressHtml = '';
+    if (!dim && s.term > 0) {
+      const startM = subStartMonth(s);
+      const monthsPassed = Math.max(0, Math.min(s.term, monthsBetween(startM, todayM) + 1));
+      const pct = Math.round((monthsPassed / s.term) * 100);
+      progressHtml = `<div class="debt-progress"><div class="debt-progress-fill" style="width:${pct}%;"></div></div>`;
+    }
+    return `<div class="debt-card ${dim ? 'settled' : ''}" data-sid="${s.id}">
       <div class="cat-chip personal">${initials(s.name)}</div>
-      <div class="contact-main">
-        <div class="contact-name">${escapeHtml(s.name)}</div>
-        <div class="contact-meta">${meta}</div>
+      <div class="debt-card-main">
+        <div class="debt-card-title">${escapeHtml(s.name)}</div>
+        <div class="debt-card-meta">${meta}</div>
       </div>
-      <div class="contact-amount">
-        <div class="main">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
-        <div class="sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · taksit' : 'aylık')}</div>
+      <div class="debt-card-amt">
+        <div class="debt-card-amt-main">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
+        <div class="debt-card-amt-sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · taksit' : 'aylık')}</div>
       </div>
+      ${progressHtml}
     </div>`;
   }).join('');
-  list.querySelectorAll('.contact').forEach(el => el.addEventListener('click', () => openSubForm(el.dataset.sid)));
+  list.querySelectorAll('.debt-card').forEach(el => el.addEventListener('click', () => openSubForm(el.dataset.sid)));
+}
+function monthsBetween(a, b) {
+  if (!a || !b) return 0;
+  const [ay, am] = a.split('-').map(Number);
+  const [by, bm] = b.split('-').map(Number);
+  return (by - ay) * 12 + (bm - am);
 }
 function openSubForm(id) {
   editingSubId = id || null;
@@ -4421,8 +4466,9 @@ function renderIncomes() {
   const monthly = ongoing.reduce((sum, s) => sum + subAmountForMonth(s, todayM), 0);
   let yearly = 0;
   for (let i = 0; i < 12; i++) { const m = monthKeyAdd(todayM, i); incs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); }); }
-  document.getElementById('incMonthly').textContent = fmtTL(monthly);
-  document.getElementById('incYearly').textContent = fmtTL(yearly);
+  document.getElementById('incMonthlyAmt').textContent = Number(monthly).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('incYearlyAmt').textContent = fmtTL(yearly);
+  document.getElementById('incActiveCnt').textContent = ongoing.length;
   document.getElementById('atCntInc').textContent = ongoing.length;
   document.getElementById('incSectionCount').textContent = visible.length + ' kayıt';
   const list = document.getElementById('incomeList');
@@ -4440,27 +4486,36 @@ function renderIncomes() {
     const done = subCompleted(s);
     const dim = cancelled || done;
     const cat = catLabel(s.category);
-    const src = s.company ? `${escapeHtml(s.company)}<span class="dot">·</span>` : '';
-    const chan = methodText(s) ? `<span class="dot">·</span>${escapeHtml(methodText(s))}` : '';
+    const metaParts = [];
+    if (s.company) metaParts.push(escapeHtml(s.company));
+    metaParts.push(cat);
     const nb = subNextDate(s);
-    let core;
-    if (cancelled) core = 'durduruldu';
-    else if (s.term > 0) core = done ? `${s.term} ay<span class="dot">·</span>bitti` : `${s.term} ay<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
-    else core = `her ayın ${s.day}'i<span class="dot">·</span>sonraki ${fmtDateShort(nb)}`;
-    const meta = `${src}${cat}<span class="dot">·</span>${core}${chan}`;
-    return `<div class="contact ${dim ? 'settled' : ''}" data-iid="${s.id}">
+    if (cancelled) metaParts.push('durduruldu');
+    else if (s.term > 0) metaParts.push(done ? `${s.term} ay · bitti` : `${s.term} ay · sonraki ${fmtDateShort(nb)}`);
+    else metaParts.push(`her ayın ${s.day}'i · sonraki ${fmtDateShort(nb)}`);
+    if (methodText(s)) metaParts.push(escapeHtml(methodText(s)));
+    const meta = metaParts.join('<span class="dot">·</span>');
+    let progressHtml = '';
+    if (!dim && s.term > 0) {
+      const startM = subStartMonth(s);
+      const monthsPassed = Math.max(0, Math.min(s.term, monthsBetween(startM, todayM) + 1));
+      const pct = Math.round((monthsPassed / s.term) * 100);
+      progressHtml = `<div class="debt-progress"><div class="debt-progress-fill" style="width:${pct}%;background:var(--forest);"></div></div>`;
+    }
+    return `<div class="debt-card ${dim ? 'settled' : ''}" data-iid="${s.id}">
       <div class="cat-chip personal" style="background:var(--forest-bg);color:var(--forest);border-color:var(--forest-bg);">${initials(s.name)}</div>
-      <div class="contact-main">
-        <div class="contact-name">${escapeHtml(s.name)}</div>
-        <div class="contact-meta">${meta}</div>
+      <div class="debt-card-main">
+        <div class="debt-card-title">${escapeHtml(s.name)}</div>
+        <div class="debt-card-meta">${meta}</div>
       </div>
-      <div class="contact-amount">
-        <div class="main" style="color:var(--forest);">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
-        <div class="sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · süreli' : 'aylık')}</div>
+      <div class="debt-card-amt">
+        <div class="debt-card-amt-main" style="color:var(--forest);">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
+        <div class="debt-card-amt-sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · süreli' : 'aylık')}</div>
       </div>
+      ${progressHtml}
     </div>`;
   }).join('');
-  list.querySelectorAll('.contact').forEach(el => el.addEventListener('click', () => openIncomeForm(el.dataset.iid)));
+  list.querySelectorAll('.debt-card').forEach(el => el.addEventListener('click', () => openIncomeForm(el.dataset.iid)));
 }
 function renderIncActuals(s) {
   const host = document.getElementById('iActuals');
