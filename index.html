@@ -1554,12 +1554,8 @@
 
   <!-- VIEW: RECEIVABLES (alacaklar) -->
   <div id="viewReceivables" style="display:none;">
-    <div class="atabs">
-      <button class="atab active" data-atab="accounts">Cari hesaplar<span class="cnt" id="atCntAcc">0</span></button>
-      <button class="atab" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntInc">0</span></button>
-    </div>
     <div id="aPanelAccounts">
-      <!-- Toplam alacak özet kartı -->
+      <!-- Toplam alacak özet kartı (en üstte) -->
       <div class="debt-summary">
         <div class="debt-sum-label">Toplam açık alacak</div>
         <div class="debt-sum-amount"><span class="sym">₺</span><span id="recvTotalAmt">0</span></div>
@@ -1568,6 +1564,11 @@
           <span class="ds-chip"><span class="ds-amt" id="recvOverdueAmt">₺0</span><span class="ds-lbl">geciken</span></span>
           <span class="ds-chip"><span class="ds-amt" id="recvSettledAmt">₺0</span><span class="ds-lbl">kapanan</span></span>
         </div>
+      </div>
+      <!-- Atabs kayıtların hemen üstünde -->
+      <div class="atabs">
+        <button class="atab active" data-atab="accounts">Cari hesaplar<span class="cnt" id="atCntAcc">0</span></button>
+        <button class="atab" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntInc">0</span></button>
       </div>
       <div class="section-head">
         <div class="section-title">Cari <em>hesaplar</em></div>
@@ -1582,15 +1583,21 @@
       <div class="debt-list" id="contactList"></div>
     </div>
     <div id="aPanelIncomes" style="display:none;">
-      <div id="incPlan"></div>
-      <!-- Toplam gelir özet kartı -->
+      <!-- Toplam aylık gelir özet kartı (en üstte) -->
       <div class="debt-summary">
         <div class="debt-sum-label">Toplam aylık gelir</div>
         <div class="debt-sum-amount"><span class="sym">₺</span><span id="incMonthlyAmt">0</span></div>
         <div class="debt-sum-meta">
-          <span class="ds-chip"><span class="ds-amt" id="incYearlyAmt">₺0</span><span class="ds-lbl">yıllık</span></span>
+          <span class="ds-chip"><span class="ds-amt" id="incYearlyAmt">₺0</span><span class="ds-lbl">yıl sonuna</span></span>
           <span class="ds-chip"><span class="ds-amt" id="incActiveCnt">0</span><span class="ds-lbl">aktif</span></span>
         </div>
+      </div>
+      <!-- Aylık tahsilat planı -->
+      <div id="incPlan"></div>
+      <!-- Atabs kayıtların hemen üstünde -->
+      <div class="atabs">
+        <button class="atab" data-atab="accounts">Cari hesaplar<span class="cnt" id="atCntAccI">0</span></button>
+        <button class="atab active" data-atab="incomes">Düzenli gelirler<span class="cnt" id="atCntIncI">0</span></button>
       </div>
       <div class="section-head">
         <div class="section-title">Gelir <em>kayıtları</em></div>
@@ -4136,6 +4143,7 @@ function renderSummary() {
   const activeContacts = (store.contacts || []).filter(contactIsActive).length;
   document.getElementById('mtRecv').textContent = activeContacts;
   document.getElementById('atCntAcc').textContent = activeContacts;
+  document.getElementById('atCntAccI').textContent = activeContacts;
   document.getElementById('mtDebt').textContent = (store.debts || []).filter(debtIsActive).length;
 }
 
@@ -4927,12 +4935,19 @@ function renderIncomes() {
   const ongoing = incs.filter(subOngoing);
   const visible = incs.filter(s => !subCompleted(s));
   const monthly = ongoing.reduce((sum, s) => sum + subAmountForMonth(s, todayM), 0);
+  // Yıllık: bu aydan yılın sonuna (1 Ocak'a kadar; Aralık dahil)
   let yearly = 0;
-  for (let i = 0; i < 12; i++) { const m = monthKeyAdd(todayM, i); incs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); }); }
+  const todayYear = parseInt(todayM.slice(0, 4), 10);
+  const todayMonth = parseInt(todayM.slice(5, 7), 10);
+  for (let mo = todayMonth; mo <= 12; mo++) {
+    const m = `${todayYear}-${String(mo).padStart(2, '0')}`;
+    incs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); });
+  }
   document.getElementById('incMonthlyAmt').textContent = Number(monthly).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   document.getElementById('incYearlyAmt').textContent = fmtTL(yearly);
   document.getElementById('incActiveCnt').textContent = ongoing.length;
   document.getElementById('atCntInc').textContent = ongoing.length;
+  document.getElementById('atCntIncI').textContent = ongoing.length;
   document.getElementById('incSectionCount').textContent = visible.length + ' kayıt';
   const list = document.getElementById('incomeList');
   if (!visible.length) {
