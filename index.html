@@ -1104,6 +1104,62 @@
   }
   .tx.expanded + .tx-actions { display: flex; }
 
+  /* ============ ARCHIVE PRINT ============ */
+  #archivePrintHost { display: none; }
+  @media print {
+    @page { margin: 0; }
+    html, body { background: #fff !important; margin: 0; padding: 0; }
+    body > *:not(#archivePrintHost) { display: none !important; }
+    .scrim, .bnav, .fab-wrap, .topbar { display: none !important; }
+    #archivePrintHost { display: block !important; color: #1c1c1a; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    .ar-cover { padding: 110px 56px 56px; min-height: 100vh; page-break-after: always; display: flex; flex-direction: column; box-sizing: border-box; }
+    .ar-brand { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #78786f; }
+    .ar-cover-mark { display: inline-block; width: 10px; height: 10px; background: #1c1c1a; border-radius: 50%; vertical-align: 0; margin-right: 10px; }
+    .ar-cover-spacer { flex: 1; }
+    .ar-year { font-family: 'IBM Plex Serif', serif; font-size: 110px; font-weight: 500; letter-spacing: -0.04em; line-height: 0.95; color: #1c1c1a; }
+    .ar-subtitle { font-family: 'IBM Plex Serif', serif; font-size: 22px; font-weight: 400; color: #1c1c1a; margin-top: 16px; letter-spacing: -0.01em; }
+    .ar-subtitle em { font-style: italic; color: #78786f; font-weight: 400; }
+    .ar-cover-foot { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #1c1c1a; padding-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #78786f; }
+    .ar-page { padding: 48px 56px 44px; page-break-after: always; box-sizing: border-box; }
+    .ar-page:last-child { page-break-after: auto; }
+    .ar-page-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #1c1c1a; padding-bottom: 8px; margin-bottom: 22px; }
+    .ar-page-title { font-family: 'IBM Plex Serif', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; }
+    .ar-page-title em { font-style: italic; color: #78786f; font-weight: 400; }
+    .ar-page-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #78786f; }
+    .ar-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+    .ar-summary-cell { border: 1px solid #cfccbf; border-radius: 6px; padding: 14px 16px; page-break-inside: avoid; }
+    .ar-summary-cell.hero { grid-column: 1 / -1; background: #1c1c1a; color: #fbfbf9; border-color: #1c1c1a; }
+    .ar-summary-cell .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #78786f; }
+    .ar-summary-cell.hero .lbl { color: rgba(251,251,249,0.7); }
+    .ar-summary-cell .val { font-family: 'IBM Plex Serif', serif; font-size: 26px; font-weight: 500; letter-spacing: -0.015em; margin-top: 4px; }
+    .ar-summary-cell.hero .val { font-size: 34px; }
+    .ar-summary-cell .sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #78786f; margin-top: 4px; }
+    .ar-summary-cell.hero .sub { color: rgba(251,251,249,0.7); }
+    .ar-list { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+    .ar-list th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; color: #78786f; padding: 7px 8px 7px 0; border-bottom: 1px solid #1c1c1a; font-weight: 400; }
+    .ar-list th.r { text-align: right; padding-right: 0; }
+    .ar-list td { padding: 9px 8px 9px 0; border-bottom: 1px solid #e4e2d8; font-size: 12px; vertical-align: top; }
+    .ar-list td.r { text-align: right; padding-right: 0; font-family: 'IBM Plex Serif', serif; white-space: nowrap; font-weight: 500; }
+    .ar-list td.muted, .ar-list td .muted { color: #78786f; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+    .ar-list tr { page-break-inside: avoid; }
+    .ar-empty { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #78786f; padding: 18px 0; text-align: center; letter-spacing: 0.02em; }
+    .ar-section-foot { border-top: 1px solid #1c1c1a; margin-top: 14px; padding-top: 10px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .ar-section-foot strong { font-family: 'IBM Plex Serif', serif; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; text-transform: none; }
+    .ar-foot { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #78786f; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 18px; }
+  }
+
+  /* ============ ARCHIVE LIST (UI) ============ */
+  .arc-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--hair); cursor: pointer; }
+  .arc-item:first-of-type { border-top: none; }
+  .arc-year { font-family: 'IBM Plex Serif', serif; font-size: 24px; font-weight: 500; color: var(--ink); letter-spacing: -0.02em; width: 64px; flex-shrink: 0; }
+  .arc-main { flex: 1; min-width: 0; }
+  .arc-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 500; color: var(--ink); }
+  .arc-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted); margin-top: 2px; letter-spacing: 0.02em; }
+  .arc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .arc-stat { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 11px 10px; }
+  .arc-stat .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .arc-stat .val { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   /* Toast */
   .toast {
     position: fixed;
@@ -1704,6 +1760,18 @@
         <div class="set-row-r" id="setIncCatsCnt">0</div>
       </div>
     </div>
+    <div class="set-section">
+      <div class="set-section-head">
+        <div class="set-section-title">Yıllık <em>arşivler</em></div>
+      </div>
+      <div class="set-row" id="setOpenArchives">
+        <div class="set-row-l">
+          <div class="set-row-t">Yıl sonu arşivleri</div>
+          <div class="set-row-s">her 1 Ocak'ta otomatik · PDF olarak indir</div>
+        </div>
+        <div class="set-row-r" id="setArchivesCnt">0</div>
+      </div>
+    </div>
   </div>
 
   <div class="foot">· · ·</div>
@@ -2257,6 +2325,67 @@
     </div>
   </div>
 </div>
+
+<!-- ============ YEARLY ARCHIVES LIST SHEET ============ -->
+<div class="scrim" id="scrimArchives">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title">Yıllık <em>arşivler</em></div>
+        <div class="sheet-sub">Her yıl 1 Ocak'ta otomatik · manuel de ekleyebilirsin</div>
+      </div>
+      <button class="sheet-close" id="archivesClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div id="archiveList"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="archivesDone">Kapat</button>
+      <button class="btn btn-primary" id="archivesAddNow">+ Şu anki durumu arşivle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ARCHIVE DETAIL SHEET ============ -->
+<div class="scrim" id="scrimArchiveDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div class="sheet-title" id="adArcYear">—</div>
+        <div class="sheet-sub" id="adArcSub">—</div>
+      </div>
+      <button class="sheet-close" id="archiveDetailClose" aria-label="Kapat"></button>
+    </div>
+    <div class="sheet-body">
+      <div class="arc-stats">
+        <div class="arc-stat"><div class="lbl">Alacak</div><div class="val" id="adArcRecv">—</div></div>
+        <div class="arc-stat"><div class="lbl">Borç</div><div class="val" id="adArcDebt">—</div></div>
+        <div class="arc-stat"><div class="lbl">Net</div><div class="val" id="adArcNet">—</div></div>
+      </div>
+      <div class="arc-stats">
+        <div class="arc-stat"><div class="lbl">Aylık gelir</div><div class="val" id="adArcInc">—</div></div>
+        <div class="arc-stat"><div class="lbl">Aylık abonelik</div><div class="val" id="adArcSub2">—</div></div>
+        <div class="arc-stat"><div class="lbl">Kart sayısı</div><div class="val" id="adArcCards">—</div></div>
+      </div>
+      <div class="set-row" id="adArcOpenSnap">
+        <div class="set-row-l">
+          <div class="set-row-t">Detayları gör</div>
+          <div class="set-row-s">o tarihteki tüm kayıtlar</div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-danger" id="adArcDelete">Sil</button>
+      <button class="btn btn-ghost" id="archiveDetailDone">Kapat</button>
+      <button class="btn btn-primary" id="adArcPrint">PDF olarak indir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ARCHIVE PRINT HOST (sadece yazdırma sırasında görünür) ============ -->
+<div id="archivePrintHost"></div>
 
 <!-- ============ BANK ACCOUNTS LIST SHEET ============ -->
 <div class="scrim" id="scrimAccounts">
@@ -2821,6 +2950,7 @@ function load() {
   if (!store.incomes) store.incomes = [];
   if (!store.cards) store.cards = [];
   if (!store.accounts) store.accounts = [];
+  if (!store.archives) store.archives = [];
   if (!store.paidLog) store.paidLog = {};
   store.debts.forEach(d => {
     if (!d.plan) d.plan = 'installment';
@@ -4190,11 +4320,13 @@ function refresh() { renderSummary(); render(); renderDebts(); renderSubs(); ren
 function renderSettings() {
   document.getElementById('setCardsCnt').textContent = (store.cards || []).length;
   document.getElementById('setAccountsCnt').textContent = (store.accounts || []).length;
+  document.getElementById('setArchivesCnt').textContent = (store.archives || []).length;
   document.getElementById('setBanksCnt').textContent = (banks || []).length;
   document.getElementById('setSubCatsCnt').textContent = (typeof subcats !== 'undefined' ? subcats : []).length;
   document.getElementById('setIncCatsCnt').textContent = (typeof inccats !== 'undefined' ? inccats : []).length;
   if (scrimCards && scrimCards.classList.contains('open')) renderCardList();
   if (scrimAccounts && scrimAccounts.classList.contains('open')) renderAccountList();
+  if (scrimArchives && scrimArchives.classList.contains('open')) renderArchiveList();
 }
 // ============ CARDS LIST SHEET ============
 const scrimCards = document.getElementById('scrimCards');
@@ -4232,6 +4364,7 @@ scrimCards.addEventListener('click', e => { if (e.target === scrimCards) closeCa
 
 document.getElementById('setOpenCards').addEventListener('click', openCardsList);
 document.getElementById('setOpenAccounts').addEventListener('click', openAccountsList);
+document.getElementById('setOpenArchives').addEventListener('click', openArchivesList);
 document.getElementById('setOpenBanks').addEventListener('click', () => openBanks());
 document.getElementById('setOpenFaiz').addEventListener('click', () => openRates());
 document.getElementById('setOpenSubCats').addEventListener('click', () => openCats('sub'));
@@ -4552,6 +4685,428 @@ document.getElementById('adEdit').addEventListener('click', () => {
   closeAccountDetail();
   openAccountForm(id);
 });
+
+// ============ YEARLY ARCHIVES ============
+const scrimArchives = document.getElementById('scrimArchives');
+const scrimArchiveDetail = document.getElementById('scrimArchiveDetail');
+let currentArchiveId = null;
+
+function deepCopy(o) { return JSON.parse(JSON.stringify(o || null)); }
+
+// Verilen anlık duruma (snap) göre özet
+function computeArchiveSummary(snap) {
+  const debts = snap.debts || [];
+  const contacts = snap.contacts || [];
+  const subs = snap.subs || [];
+  const incomes = snap.incomes || [];
+  const cards = snap.cards || [];
+  const accounts = snap.accounts || [];
+
+  // Borç toplam
+  let debtRem = 0, debtLoan = 0, debtCard = 0, debtPersonal = 0;
+  debts.forEach(d => {
+    const rem = debtTotalsFromSnap(d).remaining;
+    if (rem < 0.01) return;
+    debtRem += rem;
+    if (d.category === 'loan') debtLoan += rem;
+    else if (d.category === 'card') debtCard += rem;
+    else if (d.category === 'personal') debtPersonal += rem;
+  });
+  // Alacak toplam (cari hesaplar)
+  let recvOpen = 0;
+  contacts.forEach(c => {
+    const t = contactTotalsFromSnap(c);
+    if (t.balance > 0.01) recvOpen += t.balance;
+  });
+  // Aylık gelir/abonelik (snapshot tarihi itibarıyla)
+  const archMonth = snap._asOf ? snap._asOf.slice(0, 7) : todayISO().slice(0, 7);
+  let monthlyInc = 0, monthlySub = 0;
+  incomes.forEach(s => { if (subOngoingAt(s, archMonth)) monthlyInc += subAmountForMonthOrFallback(s, archMonth); });
+  subs.forEach(s => { if (subOngoingAt(s, archMonth)) monthlySub += subAmountForMonthOrFallback(s, archMonth); });
+
+  return {
+    debtRemaining: debtRem,
+    debtByCat: { loan: debtLoan, card: debtCard, personal: debtPersonal },
+    recvOpen,
+    net: recvOpen - debtRem,
+    monthlyIncome: monthlyInc,
+    monthlySubscription: monthlySub,
+    cardsCount: cards.length,
+    accountsCount: accounts.length,
+    contactsCount: contacts.length,
+    debtsCount: debts.length,
+    subsCount: subs.length,
+    incomesCount: incomes.length
+  };
+}
+// Geriye dönük alanları handle eden hesaplama yardımcıları (snapshot içindeki kayıtlar üstünde)
+function debtTotalsFromSnap(d) {
+  // debtTotals'u snap içindeki bir borca uygulayabilmek için global debtTotals'a yaslan
+  return debtTotals(d);
+}
+function contactTotalsFromSnap(c) { return contactTotals(c); }
+function subOngoingAt(s, month) {
+  if (s.active === false) return false;
+  const start = (s.startDate || '').slice(0, 7);
+  if (start && month < start) return false;
+  if (!(s.term > 0)) return true;
+  // term ay sonu
+  const endM = start ? monthKeyAdd(start, s.term - 1) : null;
+  return endM ? month <= endM : true;
+}
+function subAmountForMonthOrFallback(s, m) {
+  if (s.variable && s.actuals && s.actuals[m] != null) return Number(s.actuals[m]) || 0;
+  return Number(s.amount) || 0;
+}
+
+function createArchive(year, label) {
+  const snap = {
+    _asOf: (year ? `${year}-12-31` : todayISO()),
+    contacts: deepCopy(store.contacts || []),
+    debts: deepCopy(store.debts || []),
+    subs: deepCopy(store.subs || []),
+    incomes: deepCopy(store.incomes || []),
+    cards: deepCopy(store.cards || []),
+    accounts: deepCopy(store.accounts || []),
+    paidLog: deepCopy(store.paidLog || {})
+  };
+  const summary = computeArchiveSummary(snap);
+  const archive = {
+    id: uid(),
+    year: year || new Date().getFullYear(),
+    label: label || (year ? `${year} yıl sonu` : 'Manuel arşiv'),
+    createdAt: Date.now(),
+    asOf: snap._asOf,
+    snapshot: snap,
+    summary
+  };
+  store.archives = store.archives || [];
+  store.archives.push(archive);
+  store.archives.sort((a, b) => (a.year - b.year) || (a.createdAt - b.createdAt));
+  persist();
+  return archive;
+}
+
+function ensureYearlyArchive() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  if (store.lastSeenYear == null) {
+    // İlk açılış: referans olarak kaydet, geçmiş yılları arşivleme
+    store.lastSeenYear = currentYear;
+    persist();
+    return;
+  }
+  // Geçen yıldan bu yana atlanan yılları arşivle (örn. uygulamayı 2 yıl açmadıysa 2'sini de)
+  let created = 0;
+  for (let y = store.lastSeenYear; y < currentYear; y++) {
+    // Bu yıl için zaten bir otomatik kayıt var mı?
+    const exists = (store.archives || []).find(a => a.year === y && a.auto);
+    if (!exists) {
+      const arc = createArchive(y, `${y} yıl sonu`);
+      arc.auto = true;
+      created++;
+    }
+  }
+  store.lastSeenYear = currentYear;
+  if (created > 0) {
+    persist();
+    toast(`${created} yıllık arşiv otomatik oluşturuldu`, 'success');
+  } else {
+    persist();
+  }
+}
+
+// Liste
+function renderArchiveList() {
+  const list = document.getElementById('archiveList');
+  if (!list) return;
+  const arcs = (store.archives || []).slice().sort((a, b) => (b.year - a.year) || (b.createdAt - a.createdAt));
+  if (arcs.length === 0) {
+    list.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:18px 0;text-align:center;">Henüz arşiv yok.<br>Her 1 Ocak'ta otomatik oluşur; aşağıdaki düğmeyle de elle ekleyebilirsin.</div>`;
+    return;
+  }
+  list.innerHTML = arcs.map(a => {
+    const dt = new Date(a.createdAt);
+    const dtStr = dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const s = a.summary || {};
+    return `<div class="arc-item" data-aid="${a.id}">
+      <div class="arc-year">${a.year}</div>
+      <div class="arc-main">
+        <div class="arc-title">${escapeHtml(a.label || a.year + ' arşivi')}</div>
+        <div class="arc-sub">${dtStr} · alacak ${fmtTL(s.recvOpen || 0)} · borç ${fmtTL(s.debtRemaining || 0)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.arc-item').forEach(el => el.addEventListener('click', () => openArchiveDetail(el.dataset.aid)));
+}
+
+function openArchivesList() { renderArchiveList(); scrimArchives.classList.add('open'); }
+function closeArchivesList() { scrimArchives.classList.remove('open'); }
+document.getElementById('archivesClose').addEventListener('click', closeArchivesList);
+document.getElementById('archivesDone').addEventListener('click', closeArchivesList);
+scrimArchives.addEventListener('click', e => { if (e.target === scrimArchives) closeArchivesList(); });
+document.getElementById('archivesAddNow').addEventListener('click', () => {
+  const arc = createArchive(new Date().getFullYear(), 'Manuel arşiv · ' + new Date().toLocaleDateString('tr-TR'));
+  refresh();
+  renderArchiveList();
+  toast('Arşiv kaydedildi', 'success');
+});
+
+// Detay
+function openArchiveDetail(id) {
+  currentArchiveId = id;
+  const a = (store.archives || []).find(x => x.id === id);
+  if (!a) return;
+  const s = a.summary || {};
+  document.getElementById('adArcYear').textContent = `${a.year} arşivi`;
+  document.getElementById('adArcSub').textContent = new Date(a.createdAt).toLocaleString('tr-TR');
+  document.getElementById('adArcRecv').textContent = fmtTL(s.recvOpen || 0);
+  document.getElementById('adArcDebt').textContent = fmtTL(s.debtRemaining || 0);
+  document.getElementById('adArcNet').textContent = fmtTL(s.net || 0);
+  document.getElementById('adArcInc').textContent = fmtTL(s.monthlyIncome || 0);
+  document.getElementById('adArcSub2').textContent = fmtTL(s.monthlySubscription || 0);
+  document.getElementById('adArcCards').textContent = (s.cardsCount || 0) + ' kart';
+  scrimArchiveDetail.classList.add('open');
+}
+function closeArchiveDetail() { scrimArchiveDetail.classList.remove('open'); currentArchiveId = null; }
+document.getElementById('archiveDetailClose').addEventListener('click', closeArchiveDetail);
+document.getElementById('archiveDetailDone').addEventListener('click', closeArchiveDetail);
+scrimArchiveDetail.addEventListener('click', e => { if (e.target === scrimArchiveDetail) closeArchiveDetail(); });
+document.getElementById('adArcDelete').addEventListener('click', () => {
+  if (!currentArchiveId) return;
+  if (!confirm('Bu arşiv silinsin mi?')) return;
+  store.archives = (store.archives || []).filter(x => x.id !== currentArchiveId);
+  persist();
+  closeArchiveDetail();
+  renderArchiveList();
+  refresh();
+  toast('Arşiv silindi', 'success');
+});
+
+// PDF üretimi: önce host'u doldur, sonra window.print() — kullanıcı OS dialog'undan PDF olarak kaydeder
+function printArchive(id) {
+  const a = (store.archives || []).find(x => x.id === id);
+  if (!a) return;
+  const host = document.getElementById('archivePrintHost');
+  host.innerHTML = buildArchivePrintHtml(a);
+  // iOS: print() hemen sonra dialog kapalı kalabiliyor; küçük gecikme ekle
+  setTimeout(() => {
+    window.print();
+  }, 100);
+}
+document.getElementById('adArcPrint').addEventListener('click', () => {
+  if (currentArchiveId) printArchive(currentArchiveId);
+});
+
+// Yazdırılabilir HTML oluştur
+function buildArchivePrintHtml(a) {
+  const s = a.summary || {};
+  const snap = a.snapshot || {};
+  const debts = snap.debts || [];
+  const contacts = snap.contacts || [];
+  const incomes = snap.incomes || [];
+  const subs = snap.subs || [];
+  const cards = snap.cards || [];
+  const accounts = snap.accounts || [];
+  const dt = new Date(a.createdAt);
+  const dtStr = dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const tlFmt = (n) => '₺' + Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // KAPAK
+  let html = `
+    <div class="ar-cover">
+      <div class="ar-brand"><span class="ar-cover-mark"></span>Cari Takip</div>
+      <div class="ar-cover-spacer"></div>
+      <div class="ar-year">${a.year}</div>
+      <div class="ar-subtitle">Yıl Sonu <em>arşivi</em></div>
+      <div class="ar-cover-spacer"></div>
+      <div class="ar-cover-foot">
+        <span>${escapeHtml(a.label || '')}</span>
+        <span>${dtStr}</span>
+      </div>
+    </div>`;
+
+  // GENEL DURUM
+  html += `
+    <div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Genel <em>durum</em></div>
+        <div class="ar-page-meta">${dtStr} itibarıyla</div>
+      </div>
+      <div class="ar-summary-grid">
+        <div class="ar-summary-cell hero">
+          <div class="lbl">Net Durum</div>
+          <div class="val">${tlFmt(s.net)}</div>
+          <div class="sub">alacak − borç</div>
+        </div>
+        <div class="ar-summary-cell">
+          <div class="lbl">Toplam Açık Alacak</div>
+          <div class="val">${tlFmt(s.recvOpen)}</div>
+          <div class="sub">${s.contactsCount || 0} kişi</div>
+        </div>
+        <div class="ar-summary-cell">
+          <div class="lbl">Toplam Açık Borç</div>
+          <div class="val">${tlFmt(s.debtRemaining)}</div>
+          <div class="sub">${s.debtsCount || 0} kayıt</div>
+        </div>
+        <div class="ar-summary-cell">
+          <div class="lbl">Aylık Gelir</div>
+          <div class="val">${tlFmt(s.monthlyIncome)}</div>
+          <div class="sub">${s.incomesCount || 0} kaynak</div>
+        </div>
+        <div class="ar-summary-cell">
+          <div class="lbl">Aylık Abonelik</div>
+          <div class="val">${tlFmt(s.monthlySubscription)}</div>
+          <div class="sub">${s.subsCount || 0} abonelik</div>
+        </div>
+      </div>
+      <div class="ar-page-head" style="margin-top:18px;">
+        <div class="ar-page-title">Borç <em>dağılımı</em></div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Kategori</th><th class="r">Tutar</th></tr>
+        <tr><td>Krediler</td><td class="r">${tlFmt((s.debtByCat || {}).loan)}</td></tr>
+        <tr><td>Kredi kartları</td><td class="r">${tlFmt((s.debtByCat || {}).card)}</td></tr>
+        <tr><td>Şahıs borçları</td><td class="r">${tlFmt((s.debtByCat || {}).personal)}</td></tr>
+      </table>
+      <div class="ar-section-foot">
+        <span>Toplam</span><strong>${tlFmt(s.debtRemaining)}</strong>
+      </div>
+    </div>`;
+
+  // BORÇLAR
+  const activeDebts = debts.filter(d => debtTotalsFromSnap(d).remaining > 0.01);
+  if (activeDebts.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Borç <em>kayıtları</em></div>
+        <div class="ar-page-meta">${activeDebts.length} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Ad</th><th>Kategori</th><th class="r">Kalan</th><th class="r">Toplam</th></tr>
+        ${activeDebts.map(d => {
+          const t = debtTotalsFromSnap(d);
+          const catText = ({ loan: 'Kredi', card: 'Kart', personal: 'Şahıs' }[d.category] || '—');
+          return `<tr>
+            <td>${escapeHtml(debtName(d) || '—')}<div class="muted">${d.plan === 'installment' ? `${t.paidCount}/${d.count} taksit` : (d.dueDate ? 'vade ' + fmtDateShort(d.dueDate) : 'tek seferlik')}</div></td>
+            <td>${catText}</td>
+            <td class="r">${tlFmt(t.remaining)}</td>
+            <td class="r"><span class="muted">${tlFmt(t.total)}</span></td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div class="ar-section-foot">
+        <span>Toplam kalan</span><strong>${tlFmt(s.debtRemaining)}</strong>
+      </div>
+    </div>`;
+  }
+
+  // ALACAKLAR
+  const activeRecv = contacts.filter(c => contactTotalsFromSnap(c).balance > 0.01);
+  if (activeRecv.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Açık <em>alacaklar</em></div>
+        <div class="ar-page-meta">${activeRecv.length} kişi</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Kişi</th><th class="r">Toplam</th><th class="r">Ödenen</th><th class="r">Kalan</th></tr>
+        ${activeRecv.map(c => {
+          const t = contactTotalsFromSnap(c);
+          return `<tr>
+            <td>${escapeHtml(c.name || '—')}</td>
+            <td class="r"><span class="muted">${tlFmt(t.debt)}</span></td>
+            <td class="r"><span class="muted">${tlFmt(t.paid)}</span></td>
+            <td class="r">${tlFmt(t.balance)}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div class="ar-section-foot">
+        <span>Toplam</span><strong>${tlFmt(s.recvOpen)}</strong>
+      </div>
+    </div>`;
+  }
+
+  // DÜZENLİ GELİRLER
+  if (incomes.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Düzenli <em>gelirler</em></div>
+        <div class="ar-page-meta">${incomes.length} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Ad</th><th>Kaynak</th><th class="r">Aylık</th></tr>
+        ${incomes.map(i => `<tr>
+          <td>${escapeHtml(i.name || '—')}<div class="muted">${i.term > 0 ? `${i.term} ay süreli` : 'süresiz'}${i.category ? ' · ' + escapeHtml(catLabel(i.category)) : ''}</div></td>
+          <td>${i.company ? escapeHtml(i.company) : '—'}</td>
+          <td class="r">${tlFmt(i.amount)}</td>
+        </tr>`).join('')}
+      </table>
+      <div class="ar-section-foot">
+        <span>Aylık toplam</span><strong>${tlFmt(s.monthlyIncome)}</strong>
+      </div>
+    </div>`;
+  }
+
+  // ABONELİKLER
+  if (subs.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Abonelik <em>kayıtları</em></div>
+        <div class="ar-page-meta">${subs.length} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Ad</th><th>Firma</th><th class="r">Aylık</th></tr>
+        ${subs.map(x => `<tr>
+          <td>${escapeHtml(x.name || '—')}<div class="muted">${x.term > 0 ? `${x.term} ay taksit` : 'süresiz'}${x.category ? ' · ' + escapeHtml(catLabel(x.category)) : ''}</div></td>
+          <td>${x.company ? escapeHtml(x.company) : '—'}</td>
+          <td class="r">${tlFmt(x.amount)}</td>
+        </tr>`).join('')}
+      </table>
+      <div class="ar-section-foot">
+        <span>Aylık toplam</span><strong>${tlFmt(s.monthlySubscription)}</strong>
+      </div>
+    </div>`;
+  }
+
+  // KARTLAR
+  if (cards.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Kredi <em>kartları</em></div>
+        <div class="ar-page-meta">${cards.length} kart</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Banka · ad</th><th>Sahibi</th><th class="r">Limit</th></tr>
+        ${cards.map(c => `<tr>
+          <td>${escapeHtml(c.bank || '—')}${c.name ? ' · ' + escapeHtml(c.name) : ''}</td>
+          <td>${escapeHtml(c.owner || '—')}</td>
+          <td class="r">${tlFmt(c.limit)}</td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
+  }
+
+  // BANKA HESAPLARI
+  if (accounts.length > 0) {
+    html += `<div class="ar-page">
+      <div class="ar-page-head">
+        <div class="ar-page-title">Banka <em>hesapları</em></div>
+        <div class="ar-page-meta">${accounts.length} hesap</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Banka · sahip</th><th>IBAN</th></tr>
+        ${accounts.map(x => `<tr>
+          <td>${escapeHtml(x.bank || '—')}${x.owner ? ' · ' + escapeHtml(x.owner) : ''}</td>
+          <td><span class="muted">${escapeHtml(x.iban || '—')}</span></td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
+  }
+
+  html += `<div class="ar-foot">${escapeHtml(a.label || '')} · cari takip</div>`;
+  return html;
+}
 
 // ============ SUBSCRIPTIONS (abonelikler) ============
 const scrimSub = document.getElementById('scrimSub');
@@ -6549,6 +7104,8 @@ document.querySelectorAll('#subPlanSeg .seg-btn').forEach(b => b.addEventListene
 txCurF = curField('txCur', 'txAmount', 'txDate', 'txTry', 'txTryField', 'txAmountLabel');
 dpCurF = curField('dpCur', 'dpAmount', 'dpDate', 'dpTry', 'dpTryField', 'dpAmountLabel');
 dCurF = curField('dCur', 'dTotal', 'dStartDate', 'dTotalTry', 'dTryField', 'dTotalLabel');
+// Yıl atlandıysa otomatik arşiv oluştur (her 1 Ocak'ta önceki yılın anlık durumu)
+ensureYearlyArchive();
 refresh();
 setMode('home');
 
