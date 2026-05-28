@@ -5517,8 +5517,8 @@ function renderSubs() {
         <div class="debt-card-meta">${meta}</div>
       </div>
       <div class="debt-card-amt">
-        <div class="debt-card-amt-main">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
-        <div class="debt-card-amt-sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · taksit' : 'aylık')}</div>
+        <div class="debt-card-amt-main">${fmtTL(Number(s.amount) || 0)}</div>
+        <div class="debt-card-amt-sub">${s.variable ? 'değişken · aylık' : (s.term > 0 ? 'aylık · taksit' : 'aylık')}</div>
       </div>
       ${progressHtml}
     </div>`;
@@ -5838,8 +5838,8 @@ function renderIncomes() {
         <div class="debt-card-meta">${meta}</div>
       </div>
       <div class="debt-card-amt">
-        <div class="debt-card-amt-main" style="color:var(--forest);">${subAmountEstimated(s, todayM) ? '~' : ''}${fmtTL(subAmountForMonth(s, todayM))}</div>
-        <div class="debt-card-amt-sub">${s.variable ? 'değişken' : (s.term > 0 ? 'aylık · süreli' : 'aylık')}</div>
+        <div class="debt-card-amt-main" style="color:var(--forest);">${fmtTL(Number(s.amount) || 0)}</div>
+        <div class="debt-card-amt-sub">${s.variable ? 'değişken · aylık' : (s.term > 0 ? 'aylık · süreli' : 'aylık')}</div>
       </div>
       ${progressHtml}
     </div>`;
