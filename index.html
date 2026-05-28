@@ -3590,7 +3590,8 @@ function renderSubs() {
   const subs = store.subs || [];
   const todayM = todayISO().slice(0, 7);
   const ongoing = subs.filter(subOngoing);
-  const monthly = subs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? subAmountForMonth(s, todayM) : 0), 0);
+  const visible = subs.filter(s => !subCompleted(s));
+  const monthly = ongoing.reduce((sum, s) => sum + subAmountForMonth(s, todayM), 0);
   let yearly = 0;
   for (let i = 0; i < 12; i++) {
     const m = monthKeyAdd(todayM, i);
@@ -3599,13 +3600,13 @@ function renderSubs() {
   document.getElementById('subMonthly').textContent = fmtTL(monthly);
   document.getElementById('subYearly').textContent = fmtTL(yearly);
   document.getElementById('mtSub').textContent = ongoing.length;
-  document.getElementById('subSectionCount').textContent = subs.length + ' kayıt';
+  document.getElementById('subSectionCount').textContent = visible.length + ' kayıt';
   const list = document.getElementById('subList');
-  if (!subs.length) {
+  if (!visible.length) {
     list.innerHTML = `<div class="empty"><div class="empty-mark">∅</div><div class="empty-title">Boş</div><div class="empty-sub">Henüz abonelik yok.<br>Aşağıdaki butondan ekle; her ay otomatik işler.</div></div>`;
     return;
   }
-  const sorted = [...subs].sort((a, b) => {
+  const sorted = [...visible].sort((a, b) => {
     const aa = subOngoing(a), ba = subOngoing(b);
     if (aa !== ba) return aa ? -1 : 1;
     return (subNextDate(a) || '9999').localeCompare(subNextDate(b) || '9999');
@@ -3751,19 +3752,20 @@ function renderIncomes() {
   const incs = store.incomes || [];
   const todayM = todayISO().slice(0, 7);
   const ongoing = incs.filter(subOngoing);
-  const monthly = incs.reduce((sum, s) => sum + (subChargesInMonth(s, todayM) ? subAmountForMonth(s, todayM) : 0), 0);
+  const visible = incs.filter(s => !subCompleted(s));
+  const monthly = ongoing.reduce((sum, s) => sum + subAmountForMonth(s, todayM), 0);
   let yearly = 0;
   for (let i = 0; i < 12; i++) { const m = monthKeyAdd(todayM, i); incs.forEach(s => { if (subChargesInMonth(s, m)) yearly += subAmountForMonth(s, m); }); }
   document.getElementById('incMonthly').textContent = fmtTL(monthly);
   document.getElementById('incYearly').textContent = fmtTL(yearly);
   document.getElementById('atCntInc').textContent = ongoing.length;
-  document.getElementById('incSectionCount').textContent = incs.length + ' kayıt';
+  document.getElementById('incSectionCount').textContent = visible.length + ' kayıt';
   const list = document.getElementById('incomeList');
-  if (!incs.length) {
+  if (!visible.length) {
     list.innerHTML = `<div class="empty"><div class="empty-mark">∅</div><div class="empty-title">Boş</div><div class="empty-sub">Henüz düzenli gelir yok.<br>Kira, maaş gibi gelirleri ekle; her ay otomatik işler.</div></div>`;
     return;
   }
-  const sorted = [...incs].sort((a, b) => {
+  const sorted = [...visible].sort((a, b) => {
     const aa = subOngoing(a), ba = subOngoing(b);
     if (aa !== ba) return aa ? -1 : 1;
     return (subNextDate(a) || '9999').localeCompare(subNextDate(b) || '9999');
