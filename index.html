@@ -1159,6 +1159,7 @@
   .arc-stat { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 11px 10px; }
   .arc-stat .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .arc-stat .val { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .arc-stat-sec-title { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid var(--hair); }
 
   /* Toast */
   .toast {
@@ -2369,11 +2370,16 @@
         <div class="arc-stat"><div class="lbl">Aylık abonelik</div><div class="val" id="adArcSub2">—</div></div>
         <div class="arc-stat"><div class="lbl">Kart sayısı</div><div class="val" id="adArcCards">—</div></div>
       </div>
-      <div class="set-row" id="adArcOpenSnap">
-        <div class="set-row-l">
-          <div class="set-row-t">Detayları gör</div>
-          <div class="set-row-s">o tarihteki tüm kayıtlar</div>
-        </div>
+      <div class="arc-stat-sec-title">Yıl içi hareketler</div>
+      <div class="arc-stats">
+        <div class="arc-stat"><div class="lbl">Yapılan ödemeler</div><div class="val" id="adArcYearPay">—</div></div>
+        <div class="arc-stat"><div class="lbl">Alınan gelirler</div><div class="val" id="adArcYearInc">—</div></div>
+      </div>
+      <div class="arc-stat-sec-title">Borç hareketleri</div>
+      <div class="arc-stats">
+        <div class="arc-stat"><div class="lbl">Yeni borç</div><div class="val" id="adArcNewDebt">—</div></div>
+        <div class="arc-stat"><div class="lbl">Önceki yıldan</div><div class="val" id="adArcCarriedIn">—</div></div>
+        <div class="arc-stat"><div class="lbl">Sonraki yıla</div><div class="val" id="adArcCarriedOut">—</div></div>
       </div>
     </div>
     <div class="sheet-footer">
@@ -4759,6 +4765,140 @@ function subAmountForMonthOrFallback(s, m) {
   return Number(s.amount) || 0;
 }
 
+// Bir snapshot ve yıl için: yıl içinde yapılan ödemeler, alınan gelirler,
+// yeni borçlar, önceki yıldan devir borçlar, sonraki yıla devir borçlar
+function computeYearStats(snap, year) {
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const inYear = d => d && d >= yearStart && d <= yearEnd;
+
+  // ÖDEMELER: kullanıcının borç ödemeleri
+  let payments = 0;
+  const paymentEntries = []; // {date, amount, label}
+  (snap.debts || []).forEach(d => {
+    const name = debtName(d) || d.title || 'Borç';
+    // Flat borçların payments[]
+    (d.payments || []).forEach(p => {
+      if (inYear(p.date)) {
+        const amt = Number(p.try || p.amount) || 0;
+        payments += amt;
+        paymentEntries.push({ date: p.date, amount: amt, label: name });
+      }
+    });
+    // Taksit kısmi ödemeleri (d.partial[idx] dizileri)
+    if (d.partial && typeof d.partial === 'object') {
+      Object.keys(d.partial).forEach(idx => {
+        const raw = d.partial[idx];
+        const arr = Array.isArray(raw) ? raw : (typeof raw === 'number' ? [{ amount: raw, date: '' }] : []);
+        arr.forEach(p => {
+          if (inYear(p.date)) {
+            const amt = Number(p.amount) || 0;
+            payments += amt;
+            paymentEntries.push({ date: p.date, amount: amt, label: `${name} · ${parseInt(idx,10)+1}. taksit kısmi` });
+          }
+        });
+      });
+    }
+    // Tamamen ödenmiş taksitler (paidIdx): vade tarihini ödeme tarihi olarak kabul et
+    if (d.plan === 'installment' && Array.isArray(d.paidIdx) && d.firstDate) {
+      d.paidIdx.forEach(idx => {
+        const due = addMonths(d.firstDate, idx);
+        if (inYear(due)) {
+          const amt = (d.amounts && d.amounts[idx] != null) ? Number(d.amounts[idx]) : Number(d.amount || 0);
+          // Kısmi olarak zaten saydığımız tutarı düşmek için: kısmi listesi varsa, sadece taksit_tutarı − kısmi_toplamı ekle
+          let already = 0;
+          if (d.partial && d.partial[idx] != null) {
+            const raw = d.partial[idx];
+            const arr = Array.isArray(raw) ? raw : [];
+            arr.forEach(p => { if (inYear(p.date)) already += Number(p.amount) || 0; });
+          }
+          const add = Math.max(0, amt - already);
+          payments += add;
+          paymentEntries.push({ date: due, amount: add, label: `${name} · ${idx+1}. taksit` });
+        }
+      });
+    }
+  });
+
+  // GELİRLER: alınan tahsilatlar
+  let income = 0;
+  const incomeEntries = [];
+  (snap.contacts || []).forEach(c => {
+    (c.txs || []).forEach(t => {
+      if (t.type === 'payment' && inYear(t.date)) {
+        const amt = Number(t.try || t.amount) || 0;
+        income += amt;
+        incomeEntries.push({ date: t.date, amount: amt, label: c.name + ' · tahsilat' });
+      }
+    });
+  });
+  // Düzenli gelirler: paidLog'taki tam alındı işaretleri (inc:id:YYYY-MM)
+  const plog = snap.paidLog || {};
+  Object.keys(plog).forEach(key => {
+    if (!key.startsWith('inc:')) return;
+    const parts = key.split(':');
+    const m = parts[2];
+    if (m && m.startsWith(`${year}-`)) {
+      const ent = (snap.incomes || []).find(x => x.id === parts[1]);
+      if (ent) {
+        // Kısmi olarak da var mı? Aynı ay için kısmi yapıldıysa onu düş
+        let partialSum = 0;
+        if (ent.partials && Array.isArray(ent.partials[m])) {
+          ent.partials[m].forEach(p => { if (inYear(p.date)) partialSum += Number(p.amount) || 0; });
+        }
+        const expected = subAmountForMonthOrFallback(ent, m);
+        const add = Math.max(0, expected - partialSum);
+        if (add > 0.01) {
+          income += add;
+          // Ay sonundaki son günü tarih olarak kullan
+          const [y, mo] = m.split('-').map(Number);
+          const lastDay = new Date(y, mo, 0).getDate();
+          incomeEntries.push({ date: `${m}-${String(lastDay).padStart(2,'0')}`, amount: add, label: ent.name + ' · gelir' });
+        }
+      }
+    }
+  });
+  // Düzenli gelirlerin kısmi tahsilatları
+  (snap.incomes || []).forEach(s => {
+    if (!s.partials) return;
+    Object.keys(s.partials).forEach(m => {
+      const list = Array.isArray(s.partials[m]) ? s.partials[m] : [];
+      list.forEach(p => {
+        if (inYear(p.date)) {
+          const amt = Number(p.amount) || 0;
+          income += amt;
+          incomeEntries.push({ date: p.date, amount: amt, label: s.name + ' · kısmi tahsilat' });
+        }
+      });
+    });
+  });
+
+  // BORÇ HAREKETLERİ
+  const newDebts = [];
+  const carriedIn = [];
+  const carriedOut = [];
+  (snap.debts || []).forEach(d => {
+    const sd = d.startDate || '';
+    const total = Number(d.totalTry || d.total || (Number(d.amount || 0) * (d.count || 1))) || 0;
+    const remaining = debtTotals(d).remaining;
+    if (sd && inYear(sd)) newDebts.push({ d, total });
+    if (sd && sd < yearStart) carriedIn.push({ d, total });
+    if (remaining > 0.01) carriedOut.push({ d, remaining });
+  });
+
+  paymentEntries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  incomeEntries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  return {
+    yearPayments: payments,
+    yearIncome: income,
+    paymentEntries, incomeEntries,
+    newDebts, newDebtsCount: newDebts.length, newDebtsTotal: newDebts.reduce((s, x) => s + x.total, 0),
+    carriedIn, carriedInCount: carriedIn.length, carriedInTotal: carriedIn.reduce((s, x) => s + x.total, 0),
+    carriedOut, carriedOutCount: carriedOut.length, carriedOutTotal: carriedOut.reduce((s, x) => s + x.remaining, 0)
+  };
+}
+
 function createArchive(year, label) {
   const snap = {
     _asOf: (year ? `${year}-12-31` : todayISO()),
@@ -4858,6 +4998,7 @@ function openArchiveDetail(id) {
   const a = (store.archives || []).find(x => x.id === id);
   if (!a) return;
   const s = a.summary || {};
+  const ys = computeYearStats(a.snapshot || {}, a.year);
   document.getElementById('adArcYear').textContent = `${a.year} arşivi`;
   document.getElementById('adArcSub').textContent = new Date(a.createdAt).toLocaleString('tr-TR');
   document.getElementById('adArcRecv').textContent = fmtTL(s.recvOpen || 0);
@@ -4866,6 +5007,11 @@ function openArchiveDetail(id) {
   document.getElementById('adArcInc').textContent = fmtTL(s.monthlyIncome || 0);
   document.getElementById('adArcSub2').textContent = fmtTL(s.monthlySubscription || 0);
   document.getElementById('adArcCards').textContent = (s.cardsCount || 0) + ' kart';
+  document.getElementById('adArcYearPay').textContent = fmtTL(ys.yearPayments);
+  document.getElementById('adArcYearInc').textContent = fmtTL(ys.yearIncome);
+  document.getElementById('adArcNewDebt').textContent = fmtTL(ys.newDebtsTotal) + (ys.newDebtsCount ? ` · ${ys.newDebtsCount} kayıt` : '');
+  document.getElementById('adArcCarriedIn').textContent = fmtTL(ys.carriedInTotal) + (ys.carriedInCount ? ` · ${ys.carriedInCount} kayıt` : '');
+  document.getElementById('adArcCarriedOut').textContent = fmtTL(ys.carriedOutTotal) + (ys.carriedOutCount ? ` · ${ys.carriedOutCount} kayıt` : '');
   scrimArchiveDetail.classList.add('open');
 }
 function closeArchiveDetail() { scrimArchiveDetail.classList.remove('open'); currentArchiveId = null; }
@@ -4908,6 +5054,7 @@ function buildArchivePrintHtml(a) {
   const subs = snap.subs || [];
   const cards = snap.cards || [];
   const accounts = snap.accounts || [];
+  const ys = computeYearStats(snap, a.year);
   const dt = new Date(a.createdAt);
   const dtStr = dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
   const tlFmt = (n) => '₺' + Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -4973,6 +5120,137 @@ function buildArchivePrintHtml(a) {
         <span>Toplam</span><strong>${tlFmt(s.debtRemaining)}</strong>
       </div>
     </div>`;
+
+  // YIL İÇİ PARA HAREKETLERİ
+  html += `<div class="ar-page">
+    <div class="ar-page-head">
+      <div class="ar-page-title">Yıl içi <em>para hareketleri</em></div>
+      <div class="ar-page-meta">${a.year}</div>
+    </div>
+    <div class="ar-summary-grid">
+      <div class="ar-summary-cell">
+        <div class="lbl">Yapılan Ödemeler</div>
+        <div class="val">${tlFmt(ys.yearPayments)}</div>
+        <div class="sub">${ys.paymentEntries.length} hareket</div>
+      </div>
+      <div class="ar-summary-cell">
+        <div class="lbl">Alınan Gelirler</div>
+        <div class="val">${tlFmt(ys.yearIncome)}</div>
+        <div class="sub">${ys.incomeEntries.length} hareket</div>
+      </div>
+    </div>`;
+  if (ys.paymentEntries.length > 0) {
+    html += `<div class="ar-page-head" style="margin-top:24px;">
+        <div class="ar-page-title" style="font-size:16px;">Ödemeler</div>
+        <div class="ar-page-meta">${ys.paymentEntries.length} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Tarih</th><th>Açıklama</th><th class="r">Tutar</th></tr>
+        ${ys.paymentEntries.map(p => `<tr>
+          <td><span class="muted">${p.date ? fmtDateShort(p.date) : '—'}</span></td>
+          <td>${escapeHtml(p.label || '—')}</td>
+          <td class="r">${tlFmt(p.amount)}</td>
+        </tr>`).join('')}
+      </table>
+      <div class="ar-section-foot"><span>Toplam ödeme</span><strong>${tlFmt(ys.yearPayments)}</strong></div>`;
+  }
+  if (ys.incomeEntries.length > 0) {
+    html += `<div class="ar-page-head" style="margin-top:24px;">
+        <div class="ar-page-title" style="font-size:16px;">Gelirler</div>
+        <div class="ar-page-meta">${ys.incomeEntries.length} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Tarih</th><th>Açıklama</th><th class="r">Tutar</th></tr>
+        ${ys.incomeEntries.map(p => `<tr>
+          <td><span class="muted">${p.date ? fmtDateShort(p.date) : '—'}</span></td>
+          <td>${escapeHtml(p.label || '—')}</td>
+          <td class="r">${tlFmt(p.amount)}</td>
+        </tr>`).join('')}
+      </table>
+      <div class="ar-section-foot"><span>Toplam gelir</span><strong>${tlFmt(ys.yearIncome)}</strong></div>`;
+  }
+  html += `</div>`;
+
+  // BORÇ HAREKETLERİ
+  html += `<div class="ar-page">
+    <div class="ar-page-head">
+      <div class="ar-page-title">Borç <em>hareketleri</em></div>
+      <div class="ar-page-meta">${a.year}</div>
+    </div>
+    <div class="ar-summary-grid">
+      <div class="ar-summary-cell">
+        <div class="lbl">${a.year}'te Alınan Yeni Borçlar</div>
+        <div class="val">${tlFmt(ys.newDebtsTotal)}</div>
+        <div class="sub">${ys.newDebtsCount} kayıt</div>
+      </div>
+      <div class="ar-summary-cell">
+        <div class="lbl">Önceki Yıldan Devir</div>
+        <div class="val">${tlFmt(ys.carriedInTotal)}</div>
+        <div class="sub">${ys.carriedInCount} kayıt</div>
+      </div>
+      <div class="ar-summary-cell hero">
+        <div class="lbl">Sonraki Yıla Devreden</div>
+        <div class="val">${tlFmt(ys.carriedOutTotal)}</div>
+        <div class="sub">${ys.carriedOutCount} açık borç · ${a.year + 1} yılına aktarılır</div>
+      </div>
+    </div>`;
+  if (ys.newDebts.length > 0) {
+    html += `<div class="ar-page-head" style="margin-top:24px;">
+        <div class="ar-page-title" style="font-size:16px;">${a.year}'te alınan borçlar</div>
+        <div class="ar-page-meta">${ys.newDebtsCount} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Tarih</th><th>Ad</th><th>Tür</th><th class="r">Tutar</th></tr>
+        ${ys.newDebts.map(({d, total}) => {
+          const catText = ({ loan: 'Kredi', card: 'Kart', personal: 'Şahıs' }[d.category] || '—');
+          return `<tr>
+            <td><span class="muted">${d.startDate ? fmtDateShort(d.startDate) : '—'}</span></td>
+            <td>${escapeHtml(debtName(d) || '—')}</td>
+            <td>${catText}</td>
+            <td class="r">${tlFmt(total)}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div class="ar-section-foot"><span>Toplam yeni borç</span><strong>${tlFmt(ys.newDebtsTotal)}</strong></div>`;
+  }
+  if (ys.carriedIn.length > 0) {
+    html += `<div class="ar-page-head" style="margin-top:24px;">
+        <div class="ar-page-title" style="font-size:16px;">Önceki yıldan devir borçlar</div>
+        <div class="ar-page-meta">${ys.carriedInCount} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Başlama</th><th>Ad</th><th>Tür</th><th class="r">Tutar</th></tr>
+        ${ys.carriedIn.map(({d, total}) => {
+          const catText = ({ loan: 'Kredi', card: 'Kart', personal: 'Şahıs' }[d.category] || '—');
+          return `<tr>
+            <td><span class="muted">${d.startDate ? fmtDateShort(d.startDate) : '—'}</span></td>
+            <td>${escapeHtml(debtName(d) || '—')}</td>
+            <td>${catText}</td>
+            <td class="r">${tlFmt(total)}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div class="ar-section-foot"><span>Toplam devir</span><strong>${tlFmt(ys.carriedInTotal)}</strong></div>`;
+  }
+  if (ys.carriedOut.length > 0) {
+    html += `<div class="ar-page-head" style="margin-top:24px;">
+        <div class="ar-page-title" style="font-size:16px;">Sonraki yıla devreden borçlar</div>
+        <div class="ar-page-meta">${ys.carriedOutCount} kayıt</div>
+      </div>
+      <table class="ar-list">
+        <tr><th>Ad</th><th>Tür</th><th class="r">Kalan</th></tr>
+        ${ys.carriedOut.map(({d, remaining}) => {
+          const catText = ({ loan: 'Kredi', card: 'Kart', personal: 'Şahıs' }[d.category] || '—');
+          return `<tr>
+            <td>${escapeHtml(debtName(d) || '—')}<div class="muted">${d.plan === 'installment' ? `${debtTotalsFromSnap(d).paidCount}/${d.count} taksit` : (d.dueDate ? 'vade ' + fmtDateShort(d.dueDate) : 'tek seferlik')}</div></td>
+            <td>${catText}</td>
+            <td class="r">${tlFmt(remaining)}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      <div class="ar-section-foot"><span>Toplam devir</span><strong>${tlFmt(ys.carriedOutTotal)}</strong></div>`;
+  }
+  html += `</div>`;
 
   // BORÇLAR
   const activeDebts = debts.filter(d => debtTotalsFromSnap(d).remaining > 0.01);
