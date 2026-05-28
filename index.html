@@ -1219,7 +1219,8 @@
   .mp-item-l { min-width: 0; flex: 1; }
   .mp-item-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mp-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 1px; }
-  .mp-item-amt { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; white-space: nowrap; }
+  .mp-item-amt { font-family: 'IBM Plex Serif', serif; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+  .mp-item-amt:active { color: var(--muted); }
   .mp-chip { width: 24px; height: 24px; font-size: 10px; flex-shrink: 0; }
   .cat-chip.sub { background: var(--ochre-bg); color: var(--ochre); border-color: var(--ochre-bg); }
   .mp-tick { width: 22px; height: 22px; flex-shrink: 0; border: 1.5px solid var(--hair-2); background: var(--paper); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: transparent; padding: 0; }
@@ -2449,12 +2450,14 @@ function debtSchedule(d) {
   if (d.plan === 'flat') return [];
   const out = [];
   const paid = d.paidIdx || [];
+  const overrides = d.amounts || {};
   for (let i = 0; i < d.count; i++) {
+    const amt = overrides[i] != null ? Number(overrides[i]) : Number(d.amount);
     out.push({
       index: i,
       no: i + 1,
       dueDate: addMonths(d.firstDate, i),
-      amount: Number(d.amount),
+      amount: amt,
       paid: paid.includes(i)
     });
   }
@@ -2466,9 +2469,10 @@ function debtTotals(d) {
     const paid = (d.payments || []).reduce((s, p) => s + tryOf(p), 0);
     return { total, paid, remaining: Math.max(0, total - paid), paidCount: null };
   }
-  const total = Number(d.amount) * d.count;
-  const paidCount = (d.paidIdx || []).length;
-  const paid = Number(d.amount) * paidCount;
+  const sched = debtSchedule(d);
+  const total = sched.reduce((s, x) => s + x.amount, 0);
+  const paid = sched.filter(x => x.paid).reduce((s, x) => s + x.amount, 0);
+  const paidCount = sched.filter(x => x.paid).length;
   return { total, paid, remaining: Math.max(0, total - paid), paidCount };
 }
 function debtIsSettled(d) { const t = debtTotals(d); return t.total > 0 && t.paid >= t.total - 0.01; }
@@ -3979,7 +3983,7 @@ function renderMonthPlan() {
       <button type="button" class="mp-tick ${paid ? 'checked' : ''}" data-pkey="${it.key || ''}" aria-label="ödendi">✓</button>
       <div class="cat-chip ${it.cls || ''} mp-chip">${it.chip || '·'}</div>
       <div class="mp-item-l"><div class="mp-item-name">${escapeHtml(it.name)}</div><div class="mp-item-date">${fmtDateShort(it.date)}${it.sub ? ' · abonelik' : ''}</div></div>
-      <div class="mp-item-amt">${fmtTL(it.amount)}</div>
+      <div class="mp-item-amt" data-akey="${it.key || ''}" data-amt="${it.amount}" title="Tutarı değiştirmek için dokun">${fmtTL(it.amount)}</div>
     </div>`;
   }).join('');
 
@@ -4003,6 +4007,17 @@ function renderMonthPlan() {
       e.stopPropagation();
       const k = btn.dataset.pkey;
       if (k) togglePaidItem(k);
+    }));
+    detail.querySelectorAll('.mp-item-amt').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = el.dataset.akey;
+      if (!k) return;
+      const cur = Number(el.dataset.amt) || 0;
+      const v = prompt('Tutar (₺):', cur.toFixed(2));
+      if (v === null) return;
+      const num = parseFloat(v);
+      if (isNaN(num) || num < 0) { toast('Geçerli tutar girin', 'error'); return; }
+      setItemAmount(k, num);
     }));
   }
   function pick(key, label, its, el) {
@@ -4028,6 +4043,33 @@ function renderMonthPlan() {
       mpSel = '';
     }
   }
+}
+// Plan kaleminin tutarını değiştir (taksit override / flat total / sub actuals)
+function setItemAmount(key, amount) {
+  if (key.startsWith('inst:')) {
+    const [, did, idxStr] = key.split(':');
+    const d = store.debts.find(x => x.id === did);
+    if (!d) return;
+    const idx = parseInt(idxStr, 10);
+    d.amounts = d.amounts || {};
+    if (Math.abs(amount - Number(d.amount)) < 0.001) delete d.amounts[idx]; else d.amounts[idx] = amount;
+    if (!Object.keys(d.amounts).length) delete d.amounts;
+  } else if (key.startsWith('flat:')) {
+    const did = key.split(':')[1];
+    const d = store.debts.find(x => x.id === did);
+    if (!d) return;
+    d.total = amount;
+    if (d.totalTry != null) d.totalTry = amount;
+  } else if (key.startsWith('sub:')) {
+    const [, sid, m] = key.split(':');
+    const ent = (store.subs || []).find(x => x.id === sid) || (store.incomes || []).find(x => x.id === sid);
+    if (!ent) return;
+    ent.variable = true;
+    ent.actuals = ent.actuals || {};
+    ent.actuals[m] = amount;
+  }
+  persist();
+  refresh();
 }
 // Tikleme: kaleme göre gerçek borç kaydını günceller
 function togglePaidItem(key) {
