@@ -1396,7 +1396,7 @@
   </div>
 
   <!-- LIVE MARKET PANEL -->
-  <div class="market">
+  <div class="market" id="marketPanel">
     <div class="market-head">
       <div class="market-title"><span class="live-dot"></span>Piyasa — Güncel Kurlar</div>
       <div class="market-time" id="marketTime">—</div>
@@ -1421,7 +1421,7 @@
   </div>
 
   <!-- NET SUMMARY -->
-  <div class="summary">
+  <div class="summary" id="summaryPanel">
     <div class="summary-label" id="netLabel">NET DURUM</div>
     <div class="summary-amount" id="netAmount"><span class="sym">₺</span><span id="netTotal">0</span></div>
     <div class="summary-meta">
@@ -3834,6 +3834,10 @@ function setMode(m) {
   document.getElementById('viewDebts').style.display = m === 'debts' ? '' : 'none';
   document.getElementById('viewSubs').style.display = m === 'subs' ? '' : 'none';
   document.getElementById('viewSettings').style.display = m === 'settings' ? '' : 'none';
+  // Ayarlarda kurlar ve net durum gizlensin
+  const hideTop = m === 'settings';
+  document.getElementById('marketPanel').style.display = hideTop ? 'none' : '';
+  document.getElementById('summaryPanel').style.display = hideTop ? 'none' : '';
   document.querySelectorAll('.bnav-btn').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
   document.getElementById('fabLabel').textContent = fabLabelFor();
   if (m === 'settings') renderSettings();
