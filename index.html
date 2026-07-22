@@ -1844,6 +1844,13 @@
           <div class="set-row-s">yedek dosyası seç · mevcut verinin üzerine yazar</div>
         </div>
       </div>
+      <div class="set-row" id="setAutoBackup">
+        <div class="set-row-l">
+          <div class="set-row-t">Otomatik günlük yedek</div>
+          <div class="set-row-s">işlem kaydedince günde bir kez yedek dosyası indirir</div>
+        </div>
+        <div class="set-row-r" id="autoBackupState">açık</div>
+      </div>
       <div class="set-row" id="setStorageInfo" style="cursor:default">
         <div class="set-row-l">
           <div class="set-row-t">Bu kasadaki veri</div>
@@ -3079,7 +3086,7 @@ function load() {
     }
   });
 }
-function persist() { localStorage.setItem(KEY, JSON.stringify(store)); }
+function persist() { localStorage.setItem(KEY, JSON.stringify(store)); maybeAutoBackup(); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 // ============ HELPERS ============
@@ -7573,9 +7580,11 @@ function renderStorageInfo() {
   const lb = Number(localStorage.getItem(LAST_BACKUP_KEY) || 0);
   const lbEl = document.getElementById('setLastBackup');
   if (lbEl) lbEl.textContent = lb ? new Date(lb).toLocaleDateString('tr-TR', {day:'numeric', month:'short'}) : 'hiç';
+  const abEl = document.getElementById('autoBackupState');
+  if (abEl) abEl.textContent = autoBackupOn() ? 'açık' : 'kapalı';
 }
 
-document.getElementById('setExportBackup').addEventListener('click', () => {
+function doExportBackup(auto) {
   const data = {};
   BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data[k] = v; });
   const payload = { app: 'cari-takip', format: 1, exportedAt: new Date().toISOString(), data };
@@ -7589,7 +7598,29 @@ document.getElementById('setExportBackup').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   localStorage.setItem(LAST_BACKUP_KEY, String(Date.now()));
   renderStorageInfo();
-  toast(hasAnyData(store) ? 'Yedek dosyası indirildi' : 'Yedek indirildi (kasa boştu)', 'success');
+  toast(auto ? 'Günlük yedek indirildi' : (hasAnyData(store) ? 'Yedek dosyası indirildi' : 'Yedek indirildi (kasa boştu)'), 'success');
+}
+document.getElementById('setExportBackup').addEventListener('click', () => doExportBackup(false));
+
+// Otomatik günlük yedek: veri değiştiren bir kayıttan sonra, son yedek
+// eskiyse aynı dokunuş içinde yedek dosyası indirmeyi başlatır.
+const AUTO_BACKUP_KEY = 'cari_oto_yedek';
+const BOOT_TS = Date.now();
+function autoBackupOn() { return localStorage.getItem(AUTO_BACKUP_KEY) !== '0'; }
+function maybeAutoBackup() {
+  try {
+    if (!autoBackupOn() || !hasAnyData(store)) return;
+    if (Date.now() - BOOT_TS < 4000) return; // açılıştaki otomatik persist'lerde tetiklenme
+    const last = Number(localStorage.getItem(LAST_BACKUP_KEY) || 0);
+    if (Date.now() - last < 20 * 3600 * 1000) return; // günde en fazla bir kez
+    if (navigator.userActivation && !navigator.userActivation.isActive) return; // dokunuş yoksa indirme engellenir
+    doExportBackup(true);
+  } catch(e) { /* yedek denemesi kaydı asla engellememeli */ }
+}
+document.getElementById('setAutoBackup').addEventListener('click', () => {
+  localStorage.setItem(AUTO_BACKUP_KEY, autoBackupOn() ? '0' : '1');
+  renderStorageInfo();
+  toast(autoBackupOn() ? 'Otomatik günlük yedek açıldı' : 'Otomatik yedek kapatıldı', '');
 });
 
 const backupFileInput = document.getElementById('backupFileInput');
