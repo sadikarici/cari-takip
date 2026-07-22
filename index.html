@@ -1827,6 +1827,31 @@
         <div class="set-row-r" id="setArchivesCnt">0</div>
       </div>
     </div>
+    <div class="set-section">
+      <div class="set-section-head">
+        <div class="set-section-title">Yedekleme <em>ve kurtarma</em></div>
+      </div>
+      <div class="set-row" id="setExportBackup">
+        <div class="set-row-l">
+          <div class="set-row-t">Verileri dışa aktar</div>
+          <div class="set-row-s">tüm veriyi JSON dosyası olarak indir</div>
+        </div>
+        <div class="set-row-r" id="setLastBackup">—</div>
+      </div>
+      <div class="set-row" id="setImportBackup">
+        <div class="set-row-l">
+          <div class="set-row-t">Yedekten geri yükle</div>
+          <div class="set-row-s">yedek dosyası seç · mevcut verinin üzerine yazar</div>
+        </div>
+      </div>
+      <div class="set-row" id="setStorageInfo" style="cursor:default">
+        <div class="set-row-l">
+          <div class="set-row-t">Bu kasadaki veri</div>
+          <div class="set-row-s" id="storageInfoSub">—</div>
+        </div>
+      </div>
+      <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none">
+    </div>
   </div>
 
   <div class="foot">· · ·</div>
@@ -4404,6 +4429,7 @@ function renderSettings() {
   if (scrimCards && scrimCards.classList.contains('open')) renderCardList();
   if (scrimAccounts && scrimAccounts.classList.contains('open')) renderAccountList();
   if (scrimArchives && scrimArchives.classList.contains('open')) renderArchiveList();
+  renderStorageInfo();
 }
 // ============ CARDS LIST SHEET ============
 const scrimCards = document.getElementById('scrimCards');
@@ -7524,6 +7550,87 @@ document.getElementById('dSettleBtn').addEventListener('click', () => {
   }
 });
 
+// ============ BACKUP / RESTORE ============
+const BACKUP_KEYS = [KEY, FAIZ_KEY, BANKS_KEY, SUBCAT_KEY, INCCAT_KEY];
+const LAST_BACKUP_KEY = 'cari_son_yedek_ts';
+
+function backupCounts(s) {
+  return `${(s.contacts||[]).length} hesap · ${(s.debts||[]).length} borç · ${(s.subs||[]).length} abonelik · ${(s.incomes||[]).length} gelir · ${(s.archives||[]).length} arşiv`;
+}
+function hasAnyData(s) {
+  return ['contacts','debts','subs','incomes','archives','cards','accounts'].some(k => (s[k]||[]).length > 0);
+}
+function renderStorageInfo() {
+  const el = document.getElementById('storageInfoSub');
+  if (!el) return;
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    total += k.length + (localStorage.getItem(k) || '').length;
+  }
+  const kb = (total / 1024).toFixed(1);
+  el.textContent = (hasAnyData(store) ? backupCounts(store) : 'bu kasada kayıt yok') + ` · ~${kb} KB`;
+  const lb = Number(localStorage.getItem(LAST_BACKUP_KEY) || 0);
+  const lbEl = document.getElementById('setLastBackup');
+  if (lbEl) lbEl.textContent = lb ? new Date(lb).toLocaleDateString('tr-TR', {day:'numeric', month:'short'}) : 'hiç';
+}
+
+document.getElementById('setExportBackup').addEventListener('click', () => {
+  const data = {};
+  BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data[k] = v; });
+  const payload = { app: 'cari-takip', format: 1, exportedAt: new Date().toISOString(), data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cari-yedek-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  localStorage.setItem(LAST_BACKUP_KEY, String(Date.now()));
+  renderStorageInfo();
+  toast(hasAnyData(store) ? 'Yedek dosyası indirildi' : 'Yedek indirildi (kasa boştu)', 'success');
+});
+
+const backupFileInput = document.getElementById('backupFileInput');
+document.getElementById('setImportBackup').addEventListener('click', () => {
+  backupFileInput.value = '';
+  backupFileInput.click();
+});
+backupFileInput.addEventListener('change', async () => {
+  const f = backupFileInput.files && backupFileInput.files[0];
+  if (!f) return;
+  let payload;
+  try { payload = JSON.parse(await f.text()); }
+  catch(e) { toast('Dosya okunamadı: geçerli bir JSON değil', 'error'); return; }
+  // İki biçim kabul edilir: dışa aktarma dosyası veya çıplak store dökümü
+  let data = null;
+  if (payload && payload.app === 'cari-takip' && payload.data) data = payload.data;
+  else if (payload && Array.isArray(payload.contacts)) data = { [KEY]: JSON.stringify(payload) };
+  if (!data || !data[KEY]) { toast('Bu dosya bir cari-takip yedeği değil', 'error'); return; }
+  let incoming;
+  try { incoming = JSON.parse(data[KEY]); }
+  catch(e) { toast('Yedek dosyası bozuk görünüyor', 'error'); return; }
+  const ok = await customConfirm({
+    title: 'Yedekten geri yükle',
+    message: `Yedekte: ${backupCounts(incoming)}. Bu cihazdaki mevcut verinin üzerine yazılacak ve geri alınamaz.`,
+    confirmText: 'Geri yükle',
+    warn: true
+  });
+  if (!ok) return;
+  Object.keys(data).forEach(k => { if (BACKUP_KEYS.includes(k)) localStorage.setItem(k, data[k]); });
+  toast('Yedek geri yüklendi', 'success');
+  setTimeout(() => location.reload(), 700);
+});
+
+function backupNudge() {
+  if (!hasAnyData(store)) return;
+  const last = Number(localStorage.getItem(LAST_BACKUP_KEY) || 0);
+  const days = (Date.now() - last) / 86400000;
+  if (!last) toast('Hiç yedek alınmamış · Ayarlar → Yedekleme', '');
+  else if (days > 14) toast(`Son yedek ${Math.floor(days)} gün önce · Ayarlar → Yedekleme`, '');
+}
+
 // ============ INIT ============
 load();
 loadFaizRates();
@@ -7541,6 +7648,7 @@ dCurF = curField('dCur', 'dTotal', 'dStartDate', 'dTotalTry', 'dTryField', 'dTot
 ensureYearlyArchive();
 refresh();
 setMode('home');
+setTimeout(backupNudge, 1600);
 
 (async () => {
   try {
